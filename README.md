@@ -1,6 +1,6 @@
 # Steampipe Helm Chart
 
-[Steampipe](https://steampipe.io/) is the zero-ETL solution for getting data directly from APIs and services. We offer these Steampipe engines.
+[Steampipe](https://steampipe.io/) is the zero-ETL solution for getting data directly from APIs and services. This repository enables the deployment of Steampipe on Kubernetes. In addition, there is the possibility to integrate Steampipe with [OAuth2 Proxy](https://github.com/oauth2-proxy/manifests), to add extra security, such as forwarding requests to an IDP, like Keycloak.
 
 ## Usage
 
