@@ -1,0 +1,13 @@
+# See https://github.com/helm/chart-testing#configuration
+all: true
+chart-dirs:
+  - ./
+chart-repos:
+  - oauth2-proxy=https://oauth2-proxy.github.io/manifests/
+check-version-increment: true
+debug: true
+remote: origin
+target-branch: main
+upgrade: true
+validate-maintainers: true
+validate-yaml: true
