@@ -17,7 +17,7 @@ helm repo add steampipe https://github.com/devops-ia/helm-steampipe
 helm repo update
 ```
 
-## Install Helm chart
+## Install Helm chart (repository mode)
 
 ```console
 helm install [RELEASE_NAME] steampipe{{ template "chart.name" . }}
@@ -27,10 +27,17 @@ This install all the Kubernetes components associated with the chart and creates
 
 _See [helm install](https://helm.sh/docs/helm/helm_install/) for command documentation._
 
+## Install Helm chart (OCI mode)
+
+Charts are also available in OCI format. The list of available charts can be found [here](https://github.com/devops-ia/helm-steampipe/pkgs/container/helm-steampipe%2Fsteampipe).
+
+```console
+helm install [RELEASE_NAME] oci://ghcr.io/devops-ia/helm-steampipe/steampipe --version=[version]
+```
+
 ## Uninstall Helm chart
 
 ```console
-# Helm
 helm uninstall [RELEASE_NAME]
 ```
 

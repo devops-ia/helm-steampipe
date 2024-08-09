@@ -2,18 +2,26 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 ---
+# -- Number of replicas
 replicaCount: 1
 
+# -- Image registry
 image:
   repository: ghcr.io/turbot/steampipe
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
+# -- Registry secret names as an array
 imagePullSecrets: []
+
+# -- String to partially override steampipe.fullname template (will maintain the release name)
 nameOverride: ""
+
+# -- String to fully override steampipe.fullname template
 fullnameOverride: ""
 
+# -- Enable creation of ServiceAccount
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -22,20 +30,28 @@ serviceAccount:
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
+  # Specifies if you don't want the kubelet to automatically mount
+  # a ServiceAccount's API credentials
+  automountServiceAccountToken: false
 
+# -- Pod annotations
 podAnnotations: {}
 
+# -- Deployment annotations
 deploymentAnnotations: {}
 
+# -- Privilege and access control settings for a Pod or Container
 podSecurityContext:
   fsGroup: 9193
   runAsGroup: 65534
   runAsUser: 9193
 
+# -- Privilege and access control settings
 securityContext:
   runAsNonRoot: true
   runAsUser: 9193
 
+# -- Command for Pod
 command: []
 #  - "steampipe"
 #  - "service"
@@ -44,16 +60,21 @@ command: []
 #  - "--show-password"
 #  - "--database-password=1234"
 
+# -- Arguments for Pod
 args:
   - "--foreground"
   - "--show-password"
 
+# -- Environment variables to configure application
 env:
   - name: STEAMPIPE_LOG_LEVEL
     value: "TRACE"
 
+# -- Variables from file
 envFrom: []
 
+# -- Configure liveness
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes
 livenessProbe: {}
 #  httpGet:
 #    path: '/health/live'
@@ -61,6 +82,8 @@ livenessProbe: {}
 #  initialDelaySeconds: 0
 #  timeoutSeconds: 5
 
+# -- Configure readinessProbe
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes
 readinessProbe: {}
 #  httpGet:
 #    path: '/health/ready'
@@ -68,7 +91,9 @@ readinessProbe: {}
 #  initialDelaySeconds: 10
 #  timeoutSeconds: 1
 
-configProbe: {}
+# -- Configure startupProbe
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes
+startupProbe: {}
 #  httpGet:
 #    path: '/health'
 #    port: http
@@ -77,6 +102,7 @@ configProbe: {}
 #  failureThreshold: 60
 #  periodSeconds: 5
 
+# -- Configure BBDD for Steampipe
 bbdd:
   enabled: false
   svcAnnotations: {}
@@ -85,12 +111,14 @@ bbdd:
   port: 9193
   listen: "network"
 
+# -- Enable dashboard for Steampipe
 dashboard:
   enabled: false
   svcAnnotations: {}
   port: 9194
   listen: "network"
 
+# -- Ingress configuration to expose app
 ingress:
   enabled: false
   className: ""
@@ -108,6 +136,7 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
+# -- The resources limits and requested
 resources:
   {}
   #  We usually recommend not to specify default resources and to leave this as a conscious
@@ -121,12 +150,16 @@ resources:
   #    cpu: 100m
   #    memory: 128Mi
 
+# -- Node labels for pod assignment
 nodeSelector: {}
 
+# -- Tolerations for pod assignment
 tolerations: []
 
+# -- Affinity for pod assignment
 affinity: {}
 
+# -- Reference volumes
 extraVolumes: []
 #  - name: openshift-connection
 #    configMap:
@@ -138,6 +171,7 @@ extraVolumes: []
 #    secret:
 #      secretName: azure-connection
 
+# -- Mount extra volumes
 extraVolumeMount: []
 #  - name: openshift-connection
 #    mountPath: "/home/steampipe/.steampipe/config/openshift.spc"
@@ -152,6 +186,7 @@ extraVolumeMount: []
 #    readOnly: true
 #    subPath: azure.spc
 
+# -- Extra configuration for Steampipe
 extraConfig:
   configMaps:
     enabled: false
@@ -204,6 +239,7 @@ extraConfig:
                 client-certificate: path/to/my/client/cert
                 client-key: path/to/my/client/key
 
+# -- Configure initContainers
 initContainer:
   image:
     repository: ghcr.io/turbot/steampipe
@@ -215,37 +251,41 @@ initContainer:
     runAsNonRoot: true
     runAsUser: 9193
 
+  # -- Configure Steampipe plugins
+  # Ref: https://hub.steampipe.io/plugins
   plugins: []
-  ## Ref: https://hub.steampipe.io/plugins
   # - "azure"
   # - "azuread"
   # - "openshift"
   # - "terraform"
 
+  # -- Configure Steampipe mods
+  # Ref: https://hub.steampipe.io/mods
   mods: []
-  ## Ref: https://hub.steampipe.io/mods
   #  - "github.com/turbot/steampipe-mod-azure-insights"
   #  - "github.com/turbot/steampipe-mod-azure-compliance"
   #  - "github.com/turbot/steampipe-mod-azure-tags"
   #  - "github.com/turbot/steampipe-mod-terraform-azure-compliance"
 
+  # -- The resources limits and requested
   resources: {}
-  ## We usually recommend not to specify default resources and to leave this as a conscious
-  ## choice for the user. This also increases chances charts run on environments with little
-  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
-  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
   # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
+  #   cpu: "1500m"
+  #   memory: 2048Mi
   # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+  #   cpu: 1
+  #   memory: 256Mi
 
   extraInitVolumeMount: []
 
+# -- Extra containers to add to the pod
 extraContainers: []
 
-# Extra K8s manifests to deploy
+# -- Extra Kubernetes manifests to deploy
 extraObjects: []
 # - apiVersion: batch/v1
 #   kind: CronJob
@@ -267,25 +307,22 @@ extraObjects: []
 #               - date; echo Hello from the Kubernetes cluster
 #             restartPolicy: OnFailure
 
+# --  Deploys oauth2-proxy, a reverse proxy that provides authentication with Google, Github or other providers
 oauth2Proxy:
-  ## Deploys oauth2-proxy, a reverse proxy that provides authentication with Google, Github or other providers
   enabled: false
 
-## Configuration for oauth2-proxy
-## ref: https://github.com/oauth2-proxy/manifests/tree/oauth2-proxy-7.7.9/helm/oauth2-proxy
-##
-
+# --  Configuration for oauth2-proxy
+# Ref: https://github.com/oauth2-proxy/manifests/tree/oauth2-proxy-7.7.9/helm/oauth2-proxy
 oauth2-proxy:
-  ## Override the deployment namespace
-  ##
+  # -- Override the deployment namespace
   namespaceOverride: ""
 
-  # Force the target Kubernetes version (it uses Helm `.Capabilities` if not set).
+  # -- Force the target Kubernetes version (it uses Helm `.Capabilities` if not set).
   # This is especially useful for `helm template` as capabilities are always empty
   # due to the fact that it doesn't query an actual cluster
   kubeVersion:
 
-  # Oauth client configuration specifics
+  # -- Oauth client configuration specifics
   config:
     # Add config annotations
     annotations: {}
@@ -315,7 +352,8 @@ oauth2-proxy:
       # Example:
       #  - group1@example.com
       #  - group2@example.com
-    # Default configuration, to be overridden
+
+    # -- Default configuration, to be overridden
     configFile: |-
       email_domains = [ "*" ]
       upstreams = [ "file:///dev/null" ]
@@ -327,6 +365,7 @@ oauth2-proxy:
     # Example:
     # existingConfig: config
 
+  # -- Enable alpha features
   alphaConfig:
     enabled: false
     # Add config annotations
@@ -345,6 +384,7 @@ oauth2-proxy:
     # Use an existing secret
     existingSecret: ~
 
+  # -- Image registry
   image:
     repository: "quay.io/oauth2-proxy/oauth2-proxy"
     # appVersion is used by default
@@ -353,7 +393,7 @@ oauth2-proxy:
 
   # Optionally specify an array of imagePullSecrets.
   # Secrets must be manually created in the namespace.
-  # ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+  # Ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
   # imagePullSecrets:
   # - name: myRegistryKeySecretName
 
@@ -362,13 +402,17 @@ oauth2-proxy:
   # This will default to 4443 if this value is not set and the httpScheme set to https
   # containerPort: 4180
 
+  # -- Extra arguments
   extraArgs: {}
+
+  # -- Extra enviroments
   extraEnv: []
 
+  # -- Variables from file
   envFrom: []
   # Load environment variables from a ConfigMap(s) and/or Secret(s)
   # that already exists (created and managed by you).
-  # ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/#configure-all-key-value-pairs-in-a-configmap-as-container-environment-variables
+  # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/#configure-all-key-value-pairs-in-a-configmap-as-container-environment-variables
   #
   # PS: Changes in these ConfigMaps or Secrets will not be automatically
   #     detected and you must manually restart the relevant Pods after changes.
@@ -381,7 +425,7 @@ oauth2-proxy:
   # -- Custom labels to add into metadata
   customLabels: {}
 
-  # To authorize individual email addresses
+  # -- To authorize individual email addresses
   # That is part of extraArgs but since this needs special treatment we need to do a separate section
   authenticatedEmailsFile:
     enabled: false
@@ -406,6 +450,7 @@ oauth2-proxy:
     annotations: {}
     # helm.sh/resource-policy: keep
 
+  # -- Kubernetes service to expose Pod
   service:
     type: ClusterIP
     # when service.type is ClusterIP ...
@@ -425,16 +470,17 @@ oauth2-proxy:
     # configure internalTrafficPolicy
     internalTrafficPolicy: ""
 
-  ## Create or use ServiceAccount
+  # -- Create or use ServiceAccount
   serviceAccount:
-    ## Specifies whether a ServiceAccount should be created
+    # -- Specifies whether a ServiceAccount should be created
     enabled: true
-    ## The name of the ServiceAccount to use.
-    ## If not set and create is true, a name is generated using the fullname template
+    # -- The name of the ServiceAccount to use.
+    # -- If not set and create is true, a name is generated using the fullname template
     name:
     automountServiceAccountToken: true
     annotations: {}
 
+  # -- Ingress configuration to expose app
   ingress:
     enabled: false
     # className: nginx
@@ -464,6 +510,7 @@ oauth2-proxy:
     #   hosts:
     #     - chart-example.local
 
+  # -- The resources limits and requested
   resources:
     {}
     # limits:
@@ -473,26 +520,29 @@ oauth2-proxy:
     #   cpu: 100m
     #   memory: 300Mi
 
+  # -- Extra volumes
   extraVolumes:
     []
     # - name: ca-bundle-cert
     #   secret:
     #     secretName: <secret-name>
 
+  # -- Mount extra volumes
   extraVolumeMounts:
     []
     # - mountPath: /etc/ssl/certs/
     #   name: ca-bundle-cert
 
-  # Additional containers to be added to the pod.
+  # -- Additional containers to be added to the pod.
   extraContainers:
     []
     #  - name: my-sidecar
     #    image: nginx:latest
 
+  # --  mportance of a Pod relative to other Pods.
   priorityClassName: ""
 
-  # hostAliases is a list of aliases to be added to /etc/hosts for network name resolution
+  # -- hostAliases is a list of aliases to be added to /etc/hosts for network name resolution
   hostAliases: []
   # - ip: "10.xxx.xxx.xxx"
   #   hostnames:
@@ -506,22 +556,22 @@ oauth2-proxy:
   # Ref: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling
   # topologySpreadConstraints: []
 
-  # Affinity for pod assignment
+  # -- Affinity for pod assignment
   # Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   # affinity: {}
 
-  # Tolerations for pod assignment
+  # -- Tolerations for pod assignment
   # Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
-  # Node labels for pod assignment
+  # -- Node labels for pod assignment
   # Ref: https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
 
-  # Whether to use secrets instead of environment values for setting up OAUTH2_PROXY variables
+  # -- Whether to use secrets instead of environment values for setting up OAUTH2_PROXY variables
   proxyVarsAsSecrets: true
 
-  # Configure Kubernetes liveness and readiness probes.
+  # -- Configure livenessProbe
   # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
   # Disable both when deploying with Istio 1.0 mTLS. https://istio.io/help/faq/security/#k8s-health-checks
   livenessProbe:
@@ -529,6 +579,8 @@ oauth2-proxy:
     initialDelaySeconds: 0
     timeoutSeconds: 1
 
+  # -- Configure readinessProbe
+  # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes
   readinessProbe:
     enabled: true
     initialDelaySeconds: 0
@@ -536,7 +588,7 @@ oauth2-proxy:
     periodSeconds: 10
     successThreshold: 1
 
-  # Configure Kubernetes security context for container
+  # -- Configure Kubernetes security context for container
   # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
   securityContext:
     enabled: true
@@ -551,21 +603,33 @@ oauth2-proxy:
     seccompProfile:
       type: RuntimeDefault
 
+  # -- Add Deployment annotations
   deploymentAnnotations: {}
+
+  # -- Add Pod annotations
   podAnnotations: {}
+
+  # -- Add Pod labels
   podLabels: {}
+
+  # -- Number of replicas
   replicaCount: 1
+
+  # -- Max save Helm release revision
   revisionHistoryLimit: 10
+
+  # -- Configure strategy to update deployment
+  # Ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
   strategy: {}
 
-  ## PodDisruptionBudget settings
-  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
+  # -- PodDisruptionBudget settings
+  # Ref: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
   podDisruptionBudget:
     enabled: true
     minAvailable: 1
 
-  ## Horizontal Pod Autoscaling
-  ## ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+  # -- Horizontal Pod Autoscaling
+  # Ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
   autoscaling:
     enabled: false
     minReplicas: 1
@@ -574,13 +638,14 @@ oauth2-proxy:
     #  targetMemoryUtilizationPercentage: 80
     annotations: {}
 
-  # Configure Kubernetes security context for pod
+  # -- Configure Kubernetes security context for pod
   # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
   podSecurityContext: {}
 
-  # whether to use http or https
+  # -- Whether to use http or https
   httpScheme: http
 
+  # -- Configure initContainers
   initContainers:
     # if the redis sub-chart is enabled, wait for it to be ready
     # before starting the proxy
@@ -617,7 +682,7 @@ oauth2-proxy:
         #   cpu: 100m
         #   memory: 300Mi
 
-  # Additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -B" for bcrypt encryption.
+  # -- Additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -B" for bcrypt encryption.
   # Alternatively supply an existing secret which contains the required information.
   htpasswdFile:
     enabled: false
@@ -628,7 +693,7 @@ oauth2-proxy:
     # entries:
     #  - testuser:$2y$05$gY6dgXqjuzFhwdhsiFe7seM9q9Tile4Y3E.CBpAZJffkeiLaC21Gy
 
-  # Configure the session storage type, between cookie and redis
+  # -- Configure the session storage type, between cookie and redis
   sessionStorage:
     # Can be one of the supported session storage cookie|redis
     type: cookie
@@ -659,7 +724,7 @@ oauth2-proxy:
         # List of Redis sentinel connection URLs (e.g. `["redis://127.0.0.1:8000", "redis://127.0.0.1:8000"]`)
         connectionUrls: []
 
-  # Enables and configure the automatic deployment of the redis subchart
+  # -- Enables and configure the automatic deployment of the redis subchart
   redis:
     # provision an instance of the redis sub-chart
     enabled: false
@@ -668,7 +733,7 @@ oauth2-proxy:
     # redisPort: 6379
     # architecture: standalone
 
-  # Enables apiVersion deprecation checks
+  # -- Enables apiVersion deprecation checks
   checkDeprecation: true
 
   # Allows graceful shutdown
@@ -678,6 +743,7 @@ oauth2-proxy:
   #     exec:
   #       command: [ "sh", "-c", "sleep 60" ]
 
+  # -- Enable metrics for Prometheus
   metrics:
     # Enable Prometheus metrics endpoint
     enabled: true
@@ -702,29 +768,29 @@ oauth2-proxy:
       # Add custom labels to the ServiceMonitor resource
       labels: {}
 
-      ## scheme: HTTP scheme to use for scraping. Can be used with `tlsConfig` for example if using istio mTLS.
+      # -- scheme: HTTP scheme to use for scraping. Can be used with `tlsConfig` for example if using istio mTLS.
       scheme: ""
 
-      ## tlsConfig: TLS configuration to use when scraping the endpoint. For example if using istio mTLS.
-      ## Of type: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#tlsconfig
+      # -- tlsConfig: TLS configuration to use when scraping the endpoint. For example if using istio mTLS.
+      # -- Of type: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#tlsconfig
       tlsConfig: {}
 
-      ## bearerTokenFile: Path to bearer token file.
+      # -- bearerTokenFile: Path to bearer token file.
       bearerTokenFile: ""
 
-      ## Used to pass annotations that are used by the Prometheus installed in your cluster to select Service Monitors to work with
-      ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
+      # -- Used to pass annotations that are used by the Prometheus installed in your cluster to select Service Monitors to work with
+      # Ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
       annotations: {}
 
-      ## Metric relabel configs to apply to samples before ingestion.
-      ## [Metric Relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs)
+      # -- Metric relabel configs to apply to samples before ingestion.
+      # -- [Metric Relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs)
       metricRelabelings: []
       # - action: keep
       #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
       #   sourceLabels: [__name__]
 
-      ## Relabel configs to apply to samples before ingestion.
-      ## [Relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config)
+      # -- Relabel configs to apply to samples before ingestion.
+      # -- [Relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config)
       relabelings: []
       # - sourceLabels: [__meta_kubernetes_pod_node_name]
       #   separator: ;
@@ -733,7 +799,7 @@ oauth2-proxy:
       #   replacement: $1
       #   action: replace
 
-  # Extra K8s manifests to deploy
+  # -- Extra Kubernetes manifests to deploy
   extraObjects:
     []
     # - apiVersion: secrets-store.csi.x-k8s.io/v1
