@@ -22,4 +22,28 @@ entries:
     urls:
     - https://github.com/devops-ia/helm-steampipe/releases/download/v1.7.0/steampipe-1.7.0.tgz
     version: 1.7.0
-generated: "2024-08-06T08:15:07.303425097Z"
+  - apiVersion: v2
+    appVersion: 0.22.0
+    created: "2024-08-13T06:58:02.993897377Z"
+    dependencies:
+    - condition: oauth2Proxy.enabled
+      name: oauth2-proxy
+      repository: https://oauth2-proxy.github.io/manifests/
+      version: 7.7.*
+    description: A Helm chart for Kubernetes to deploy Steampipe
+    digest: 88b4fee6f8d6bca617c8ee2f1491571277b879d6c59efe1412ab3be0b920b1ea
+    home: https://github.com/devops-ia/helm-steampipe
+    keywords:
+    - steampipe
+    maintainers:
+    - email: adrianmg231189@gmail.com
+      name: amartingarcia
+      url: https://github.com/amartingarcia
+    name: steampipe
+    sources:
+    - https://github.com/turbot/steampipe
+    type: application
+    urls:
+    - https://github.com/devops-ia/helm-steampipe/releases/download/v1.0.0/steampipe-1.0.0.tgz
+    version: 1.0.0
+generated: "2024-08-13T06:58:02.993910181Z"
