@@ -1,0 +1,19 @@
+sources:
+  oauth2proxy:
+    kind: helmchart
+    spec:
+      url: https://oauth2-proxy.github.io/manifests/
+      name: oauth2proxy
+      versionFilter:
+        kind: semver
+        pattern: '*' # replace with CI/CD updatecli
+    sourceid: oauth2proxy
+conditions: {}
+targets:
+  oauth2proxy:
+    name: bump chart dependencies
+    kind: yaml
+    spec:
+      file: charts/Chart.yaml
+      key: $.dependencies[0].version
+    sourceid: oauth2proxy

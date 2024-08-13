@@ -28,4 +28,4 @@ jobs:
         uses: helm/kind-action@v1
 
       - name: Run chart-testing (lint-and-install)
-        run: ct lint-and-install --config ct.yaml
+        run: ct lint-and-install --config .github/ct.yaml
