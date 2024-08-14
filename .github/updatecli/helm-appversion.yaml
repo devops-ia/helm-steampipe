@@ -1,0 +1,16 @@
+sources:
+  steampipe:
+    kind: dockerimage
+    spec:
+      image: turbot/steampipe
+      architecture: linux/amd64
+      versionfilter:
+        kind: semver
+conditions: {}
+targets:
+  chartVersion:
+    name: bump appversion
+    kind: yaml
+    spec:
+      file: charts/Chart.yaml
+      key: $.appVersion
