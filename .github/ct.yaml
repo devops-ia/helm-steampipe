@@ -5,7 +5,7 @@ chart-dirs:
 chart-repos:
   - oauth2-proxy=https://oauth2-proxy.github.io/manifests/
 check-version-increment: true
-debug: true
+debug: false
 remote: origin
 target-branch: main
 upgrade: true
