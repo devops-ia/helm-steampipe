@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           fetch-depth: 0
 
@@ -26,7 +26,7 @@ jobs:
           done
 
       - name: Install updatecli
-        uses: updatecli/updatecli-action@v2
+        uses: updatecli/updatecli-action@9a21b6911fe58865c8346d4fde3470010f49bf31 # v2.97.0
 
       - name: Update dependencies
         run: |
@@ -42,7 +42,7 @@ jobs:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Update README.md Helm Chart
-        uses: losisin/helm-docs-github-action@v1
+        uses: losisin/helm-docs-github-action@a57fae5676e4c55a228ea654a1bcaec8dd3cf5b5 # v1.6.2
         with:
           chart-search-root: charts
 
@@ -52,7 +52,7 @@ jobs:
           echo "date=$(date -I)" >> $GITHUB_OUTPUT
 
       - name: Create PR with changes (dry-run)
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@84ae59a2cdc2258d6fa0732dd66352dddae2a412 # v7.0.9
         if: github.event_name == 'workflow_dispatch'
         with:
           add-paths: charts
@@ -68,7 +68,7 @@ jobs:
             auto-pr-bump-version
 
       - name: Create PR with changes
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@84ae59a2cdc2258d6fa0732dd66352dddae2a412 # v7.0.9
         if: github.event_name == 'schedule'
         with:
           add-paths: charts
