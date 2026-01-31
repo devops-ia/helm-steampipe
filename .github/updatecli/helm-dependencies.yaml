@@ -1,9 +1,9 @@
 sources:
   oauth2proxy:
-    kind: helmchart
+    kind: dockerimage
     spec:
-      url: https://oauth2-proxy.github.io/manifests/
-      name: oauth2proxy
+      image: ghcr.io/oauth2-proxy/charts/oauth2-proxy
+      architecture: linux/amd64
       versionFilter:
         kind: semver
         pattern: '*' # replace with CI/CD updatecli
