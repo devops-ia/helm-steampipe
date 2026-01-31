@@ -1,19 +1,19 @@
 sources:
-  oauth2proxy:
-    kind: helmchart
+  oauth2-proxy:
+    kind: dockerimage
     spec:
-      url: https://oauth2-proxy.github.io/manifests/
-      name: oauth2proxy
+      image: ghcr.io/oauth2-proxy/charts/oauth2-proxy
+      architecture: linux/amd64
       versionFilter:
         kind: semver
         pattern: '*' # replace with CI/CD updatecli
-    sourceid: oauth2proxy
+    sourceid: oauth2-proxy
 conditions: {}
 targets:
-  oauth2proxy:
+  oauth2-proxy:
     name: bump chart dependencies
     kind: yaml
     spec:
       file: charts/Chart.yaml
       key: $.dependencies[0].version
-    sourceid: oauth2proxy
+    sourceid: oauth2-proxy

@@ -28,6 +28,8 @@ jobs:
       - name: Update dependencies
         run: |
           updatecli apply --config .github/updatecli/helm-appversion.yaml --commit=false
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Get latest release
         id: latest_release

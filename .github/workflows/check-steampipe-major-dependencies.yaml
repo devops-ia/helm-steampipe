@@ -28,18 +28,15 @@ jobs:
             yq eval -i ".sources.${dependency}.spec.versionFilter.pattern = \"*\"" .github/updatecli/helm-dependencies.yaml
           done
 
+          cat .github/updatecli/helm-dependencies.yaml
+
       - name: Install updatecli
         uses: updatecli/updatecli-action@b846825b298f5351abd80f94c4f9eab63a38a804 # v2.98.0
 
       - name: Update dependencies
         run: |
-          updatecli apply --config .github/updatecli/helm-dependencies.yaml --commit=false 2>&1 | tee > $GITHUB_WORKSPACE/tmp-major-output.log
-          awk '/TARGETS/{flag=1;next}/ACTIONS/{flag=0}flag' $GITHUB_WORKSPACE/tmp-major-output.log > $GITHUB_WORKSPACE/clean-major-output.log
-          chmod +x .github/hack/prepare_body_pr.sh
-          $GITHUB_WORKSPACE/.github/hack/prepare_body_pr.sh $GITHUB_WORKSPACE/clean-major-output.log > $GITHUB_WORKSPACE/major-output.log
-
-          # show PR body
-          cat major-output.log
+          updatecli apply --config .github/updatecli/helm-dependencies.yaml --commit=false 2>&1 | tee > $GITHUB_WORKSPACE/major-output.log
+          cat $GITHUB_WORKSPACE/major-output.log
         shell: bash
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

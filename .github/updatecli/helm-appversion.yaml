@@ -1,11 +1,14 @@
 sources:
   steampipe:
-    kind: dockerimage
+    kind: githubrelease
     spec:
-      image: turbot/steampipe
-      architecture: linux/amd64
-      versionfilter:
+      owner: "turbot"
+      repository: "steampipe"
+      token: {{ requiredEnv "GITHUB_TOKEN" }}
+      versionFilter:
         kind: semver
+    transformers:
+      - trimprefix: "v"
 conditions: {}
 targets:
   chartVersion:
