@@ -15,6 +15,6 @@ keywords:
   - steampipe
 dependencies:
   - name: oauth2-proxy
-    version: 7.7.*
+    version: 7.18.0
     repository: https://oauth2-proxy.github.io/manifests/
     condition: oauth2Proxy.enabled
