@@ -16,7 +16,7 @@ A Helm chart for Kubernetes to deploy Steampipe
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://oauth2-proxy.github.io/manifests/ | oauth2-proxy | 7.7.* |
+| https://oauth2-proxy.github.io/manifests/ | oauth2-proxy | 10.1.2 |
 
 ## Add repository
 
@@ -82,10 +82,10 @@ helm show values steampipe/steampipe
 | image | object | `{"pullPolicy":"IfNotPresent","repository":"ghcr.io/turbot/steampipe","tag":""}` | Image registry |
 | imagePullSecrets | list | `[]` | Registry secret names as an array |
 | ingress | object | `{"annotations":{},"className":"","enabled":false,"hosts":[{"host":"chart-example.local","paths":[{"path":"/","pathType":"ImplementationSpecific"}]}],"tls":[]}` | Ingress configuration to expose app |
-| initContainer | object | `{"extraInitVolumeMount":[],"image":{"pullPolicy":"IfNotPresent","repository":"ghcr.io/turbot/steampipe","tag":""},"mods":[],"plugins":[],"resources":{},"securityContext":{"runAsNonRoot":true,"runAsUser":9193}}` | Configure initContainers |
+| initContainer | object | `{"extraInitVolumeMount":[],"image":{"pullPolicy":"IfNotPresent","repository":"ghcr.io/turbot/steampipe","tag":""},"mods":[],"plugins":[],"securityContext":{"runAsNonRoot":true,"runAsUser":9193}}` | Configure initContainers |
+| initContainer.extraInitVolumeMount | list | `[]` | The resources limits and requested limits:   cpu: "1500m"   memory: 2048Mi requests:   cpu: 1   memory: 256Mi |
 | initContainer.mods | list | `[]` | Configure Steampipe mods Ref: https://hub.steampipe.io/mods |
 | initContainer.plugins | list | `[]` | Configure Steampipe plugins Ref: https://hub.steampipe.io/plugins |
-| initContainer.resources | object | `{}` | The resources limits and requested |
 | livenessProbe | object | `{}` | Configure liveness Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes |
 | nameOverride | string | `""` | String to partially override steampipe.fullname template (will maintain the release name) |
 | nodeSelector | object | `{}` | Node labels for pod assignment |
