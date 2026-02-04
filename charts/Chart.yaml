@@ -3,7 +3,7 @@ name: steampipe
 description: A Helm chart for Kubernetes to deploy Steampipe
 type: application
 version: 1.0.0
-appVersion: 0.22.0
+appVersion: 2.3.4
 home: https://github.com/devops-ia/helm-steampipe
 sources:
   - https://github.com/turbot/steampipe
