@@ -16,7 +16,7 @@ A Helm chart for Kubernetes to deploy Steampipe
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://oauth2-proxy.github.io/manifests/ | oauth2-proxy | 10.1.2 |
+| https://oauth2-proxy.github.io/manifests/ | oauth2-proxy | 10.1.3 |
 
 ## Add repository
 
