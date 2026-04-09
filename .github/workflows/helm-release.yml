@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "charts/**"
+      - "charts/steampipe/**"
 
 jobs:
   release:
@@ -16,5 +16,5 @@ jobs:
       id-token: write
     uses: devops-ia/.github/.github/workflows/helm-release.yml@main
     with:
-      chart_name: charts
-      charts_dir: .
+      chart_name: steampipe
+      charts_dir: charts

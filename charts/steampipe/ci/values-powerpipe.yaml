@@ -1,0 +1,47 @@
+# Test: Powerpipe with mods and compliance benchmarks
+---
+replicaCount: 1
+
+initContainer:
+  plugins:
+    - aws
+
+bbdd:
+  enabled: true
+  port: 9193
+  listen: "network"
+  serviceType: ClusterIP
+
+env:
+  - name: STEAMPIPE_DATABASE_PASSWORD
+    value: "test-password-ci"
+  - name: STEAMPIPE_UPDATE_CHECK
+    value: "false"
+  - name: STEAMPIPE_TELEMETRY
+    value: "none"
+
+powerpipe:
+  enabled: true
+  image:
+    repository: ghcr.io/turbot/powerpipe
+    tag: "latest"
+  port: 9033
+  listen: "network"
+  mods:
+    - github.com/turbot/steampipe-mod-aws-compliance
+  env:
+    - name: STEAMPIPE_DATABASE_PASSWORD
+      value: "test-password-ci"
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: powerpipe.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            port: 9033
+    tls:
+      - secretName: powerpipe-tls
+        hosts:
+          - powerpipe.example.com

@@ -1,13 +1,13 @@
-name: Helm Check Releases
+name: Check Steampipe release
+
+permissions:
+  contents: write
+  pull-requests: write
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
-
-permissions:
-  contents: read
-  pull-requests: write
+    - cron: '0 0 * * *' # every day
 
 jobs:
   check-and-release:
@@ -21,13 +21,13 @@ jobs:
       - name: Get current release
         id: current_release
         run: |
-          current_release=$(grep appVersion charts/Chart.yaml | awk '{ print $2 }')
+          current_release=$(grep appVersion charts/steampipe/Chart.yaml | awk '{ print $2 }' | tr -d '"')
           echo "current_release=$current_release" >> $GITHUB_OUTPUT
 
       - name: Install updatecli
         uses: updatecli/updatecli-action@2cc8e6d8e356d76b0280cdd03766c36596a0614e # v3.0.0
 
-      - name: Update dependencies
+      - name: Update steampipe appVersion
         run: |
           updatecli apply --config .github/updatecli/helm-appversion.yaml --commit=false
         env:
@@ -36,13 +36,13 @@ jobs:
       - name: Get latest release
         id: latest_release
         run: |
-          latest_release=$(grep appVersion charts/Chart.yaml | awk '{ print $2 }')
+          latest_release=$(grep appVersion charts/steampipe/Chart.yaml | awk '{ print $2 }' | tr -d '"')
           echo "latest_release=$latest_release" >> $GITHUB_OUTPUT
 
       - name: Check if release changed
         id: check_changes
         run: |
-          if [ ${{ steps.latest_release.outputs.latest_release }} != ${{ steps.current_release.outputs.current_release }} ]; then
+          if [ "${{ steps.latest_release.outputs.latest_release }}" != "${{ steps.current_release.outputs.current_release }}" ]; then
             echo "release_changed=true" >> $GITHUB_OUTPUT
           fi
 
@@ -50,24 +50,23 @@ jobs:
         if: steps.check_changes.outputs.release_changed == 'true'
         uses: losisin/helm-docs-github-action@2ccf3e77eb70dc80d62f8cc26f15d0a96b75fef4 # v1.8.0
         with:
-          chart-search-root: charts
+          chart-search-root: charts/steampipe
 
       - name: Create PR with changes
         if: steps.check_changes.outputs.release_changed == 'true'
         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
         with:
           token: ${{ secrets.PAT_GITHUB }}
-          commit-message: "fix: update Steampipe version to ${{ steps.latest_release.outputs.latest_release }}"
+          commit-message: "fix: update steampipe version to ${{ steps.latest_release.outputs.latest_release }}"
           signoff: false
-          branch: fix/upgrade-steampipe-appversion-${{ steps.latest_release.outputs.latest_release }}
+          branch: chore/upgrade-steampipe-${{ steps.latest_release.outputs.latest_release }}
           delete-branch: true
           title: '[steampipe] new release: ${{ steps.latest_release.outputs.latest_release }}'
           body: |
-            Steampipe version:
+            steampipe version:
             - :information_source: Current: `${{ steps.current_release.outputs.current_release }}`
             - :up: Upgrade: `${{ steps.latest_release.outputs.latest_release }}`
 
             Changelog: https://github.com/turbot/steampipe/releases/tag/v${{ steps.latest_release.outputs.latest_release }}
           labels: |
             auto-pr-bump-version
-          team-reviewers: devops-ia

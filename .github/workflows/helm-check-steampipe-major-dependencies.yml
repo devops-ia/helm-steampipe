@@ -22,21 +22,21 @@ jobs:
         id: dependencies
         run: |
           # get name dependencies
-          dependencies=($(yq eval -o=json '.dependencies[] | .name' charts/Chart.yaml | xargs))
+          dependencies=($(yq eval -o=json '.dependencies[] | .name' charts/steampipe/Chart.yaml | xargs))
 
           # replace version
           for dependency in "${dependencies[@]}"; do
-            yq eval -i ".sources.${dependency}.spec.versionFilter.pattern = \"*\"" .github/updatecli/helm-dependencies.yaml
+            yq eval -i ".sources.${dependency}.spec.versionFilter.pattern = \"*\"" .github/updatecli/helm-chart-dependencies.yaml
           done
 
-          cat .github/updatecli/helm-dependencies.yaml
+          cat .github/updatecli/helm-chart-dependencies.yaml
 
       - name: Install updatecli
         uses: updatecli/updatecli-action@2cc8e6d8e356d76b0280cdd03766c36596a0614e # v3.0.0
 
       - name: Update dependencies
         run: |
-          updatecli apply --config .github/updatecli/helm-dependencies.yaml --commit=false 2>&1 | tee > $GITHUB_WORKSPACE/major-output.log
+          updatecli apply --config .github/updatecli/helm-chart-dependencies.yaml --commit=false 2>&1 | tee > $GITHUB_WORKSPACE/major-output.log
           cat $GITHUB_WORKSPACE/major-output.log
         shell: bash
         env:
@@ -45,7 +45,7 @@ jobs:
       - name: Update README.md Helm Chart
         uses: losisin/helm-docs-github-action@2ccf3e77eb70dc80d62f8cc26f15d0a96b75fef4 # v1.8.0
         with:
-          chart-search-root: charts
+          chart-search-root: charts/steampipe
 
       - name: Get current date
         id: date

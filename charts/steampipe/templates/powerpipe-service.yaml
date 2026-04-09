@@ -1,0 +1,21 @@
+{{- if .Values.powerpipe.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "steampipe.powerpipe.fullname" . }}
+  labels:
+    {{- include "steampipe.powerpipe.labels" . | nindent 4 }}
+  {{- with .Values.powerpipe.svcAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.powerpipe.serviceType | default "ClusterIP" }}
+  ports:
+    - name: http
+      port: {{ .Values.powerpipe.port | default 9033 }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "steampipe.powerpipe.selectorLabels" . | nindent 4 }}
+{{- end }}

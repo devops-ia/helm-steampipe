@@ -1,0 +1,33 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Steampipe Helm Chart",
+  "description": "Production-ready Helm chart for deploying Steampipe on Kubernetes. Steampipe is the zero-ETL way to query cloud APIs with SQL. This chart deploys Steampipe in service mode as a persistent PostgreSQL endpoint with plugin management, optional OAuth2 Proxy authentication, and support for 140+ cloud provider plugins.",
+  "folders": [
+    "charts/steampipe"
+  ],
+  "excludeFolders": [
+    ".github",
+    "charts/steampipe/charts"
+  ],
+  "excludeFiles": [
+    "Chart.lock",
+    "LICENSE",
+    "CODEOWNERS",
+    "package.json",
+    ".helmignore",
+    ".editorconfig",
+    ".gitignore",
+    ".pre-commit-config.yaml"
+  ],
+  "rules": [
+    "Steampipe runs as UID 9193, GID 0 (OpenShift compatible). Always set podSecurityContext.fsGroup=9193, runAsUser=9193, runAsGroup=0",
+    "Use bbdd.enabled=true to expose the PostgreSQL endpoint as a Kubernetes Service on port 9193",
+    "Set STEAMPIPE_DATABASE_PASSWORD via a Kubernetes Secret for stable database passwords across restarts",
+    "Plugin .spc configuration files must be mounted into /home/steampipe/.steampipe/config/ using extraVolumes and extraVolumeMount",
+    "The initContainer installs plugins declared in initContainer.plugins[] before the main container starts",
+    "Steampipe v2.x removed dashboard and mods support — use Powerpipe (https://powerpipe.io) for dashboards and compliance benchmarks",
+    "The Ingress template exposes an HTTP/L7 endpoint — Steampipe uses PostgreSQL/TCP on port 9193, so a TCP-capable Ingress controller is required (e.g., NGINX TCP passthrough)",
+    "Set STEAMPIPE_UPDATE_CHECK=false and STEAMPIPE_TELEMETRY=none for Kubernetes deployments",
+    "Always use --foreground flag (set in args by default) for container deployments"
+  ]
+}

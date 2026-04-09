@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "steampipe Helm chart values",
+  "description": "Configuration values for the Steampipe Helm chart. Deploys Steampipe as a persistent PostgreSQL endpoint on Kubernetes.",
+  "type": "object",
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of Steampipe pod replicas. Steampipe does not support horizontal scaling — use 1."
+    },
+    "image": {
+      "type": "object",
+      "description": "Container image configuration for the Steampipe main container.",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1, "description": "Container image registry and repository (e.g., ghcr.io/turbot/steampipe)." },
+        "tag":        { "type": "string", "description": "Image tag. Defaults to Chart.appVersion if empty." },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"], "description": "Image pull policy." }
+      },
+      "required": ["repository"]
+    },
+    "imagePullSecrets": { "type": "array", "description": "Registry secret names for private container registries." },
+    "nameOverride":     { "type": "string", "description": "Partially override the chart fullname (keeps the release name prefix)." },
+    "fullnameOverride": { "type": "string", "description": "Fully override the chart fullname." },
+    "serviceAccount": {
+      "type": "object",
+      "description": "Kubernetes ServiceAccount configuration.",
+      "properties": {
+        "create":                      { "type": "boolean", "description": "Create a ServiceAccount for this chart." },
+        "annotations":                 { "type": "object", "description": "Annotations to add to the ServiceAccount (e.g., IAM role ARN for IRSA)." },
+        "name":                        { "type": "string", "description": "Name of the ServiceAccount. Generated from fullname if empty." },
+        "automountServiceAccountToken": { "type": "boolean", "description": "Mount the SA token into pods. Required for kubernetes plugin." }
+      }
+    },
+    "podAnnotations":        { "type": "object", "description": "Annotations added to each pod." },
+    "deploymentAnnotations": { "type": "object", "description": "Annotations added to the Deployment resource." },
+    "podSecurityContext":    { "type": "object", "description": "Pod-level security context. Defaults: fsGroup=9193, runAsUser=9193, runAsGroup=0." },
+    "securityContext":       { "type": "object", "description": "Container-level security context. Defaults: runAsNonRoot=true, runAsUser=9193." },
+    "command": { "type": "array", "description": "Override the container command. Leave empty to use default entrypoint." },
+    "args":    { "type": "array", "description": "Arguments passed to steampipe service start. Default: [\"--foreground\"]." },
+    "env":     { "type": "array", "description": "Environment variables for the Steampipe container (list of {name, value} or {name, valueFrom})." },
+    "envFrom": { "type": "array", "description": "Environment variable sources (ConfigMap/Secret references)." },
+    "livenessProbe":  { "type": "object", "description": "Custom liveness probe. Auto-configured as tcpSocket on bbdd port when bbdd.enabled=true." },
+    "readinessProbe": { "type": "object", "description": "Custom readiness probe. Auto-configured as tcpSocket on bbdd port when bbdd.enabled=true." },
+    "startupProbe":   { "type": "object", "description": "Custom startup probe. Auto-configured as tcpSocket on bbdd port when bbdd.enabled=true." },
+    "bbdd": {
+      "type": "object",
+      "description": "PostgreSQL database service configuration. Enable to expose Steampipe as a ClusterIP/LoadBalancer service.",
+      "properties": {
+        "enabled":        { "type": "boolean", "description": "Create a Kubernetes Service for the PostgreSQL endpoint." },
+        "svcAnnotations": { "type": "object", "description": "Annotations added to the database Service." },
+        "port":           { "type": "integer", "minimum": 1, "maximum": 65535, "description": "PostgreSQL port. Default: 9193." },
+        "listen":         { "type": "string", "description": "Listen address: 'local' (localhost) or 'network' (all interfaces)." },
+        "serviceType":    { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"], "description": "Kubernetes Service type." }
+      }
+    },
+    "dashboard": {
+      "description": "DEPRECATED: Dashboard was removed in Steampipe v2.x (moved to Powerpipe). Setting enabled=true will cause a hard error.",
+      "type": "object",
+      "properties": {
+        "enabled":        { "type": "boolean" },
+        "svcAnnotations": { "type": "object" },
+        "port":           { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "listen":         { "type": "string" }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "description": "Ingress configuration. WARNING: Steampipe exposes PostgreSQL (TCP), not HTTP. A TCP-capable Ingress controller is required.",
+      "properties": {
+        "enabled":     { "type": "boolean", "description": "Create an Ingress resource." },
+        "className":   { "type": "string", "description": "Ingress class name (e.g., nginx, traefik)." },
+        "annotations": { "type": "object", "description": "Ingress annotations." },
+        "hosts": {
+          "type": "array",
+          "description": "Ingress host rules.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host":  { "type": "string", "description": "Hostname for the Ingress rule." },
+              "paths": { "type": "array", "description": "Path rules for this host." }
+            }
+          }
+        },
+        "tls": { "type": "array", "description": "TLS configuration for the Ingress." }
+      }
+    },
+    "resources": { "type": "object", "description": "CPU/memory resource requests and limits for the Steampipe container." },
+    "nodeSelector": { "type": "object", "description": "Node label selector for pod scheduling." },
+    "tolerations":  { "type": "array", "description": "Tolerations for pod scheduling." },
+    "affinity":     { "type": "object", "description": "Affinity rules for pod scheduling." },
+    "extraVolumes":      { "type": "array", "description": "Additional volumes to mount (e.g., plugin .spc configs from Secrets/ConfigMaps)." },
+    "extraVolumeMount":  { "type": "array", "description": "Additional volume mounts for the Steampipe container." },
+    "extraContainers":   { "type": "array", "description": "Additional sidecar containers to add to the pod." },
+    "extraObjects":      { "type": "array", "description": "Extra Kubernetes manifests to deploy alongside the chart (CronJobs, NetworkPolicies, etc.)." },
+    "extraConfig": {
+      "type": "object",
+      "description": "Create ConfigMaps and Secrets for plugin connection files (.spc).",
+      "properties": {
+        "configMaps": {
+          "type": "object",
+          "description": "ConfigMap-based plugin configuration (for non-sensitive .spc files).",
+          "properties": {
+            "enabled": { "type": "boolean", "description": "Create ConfigMaps from config entries." },
+            "config":  { "type": "array", "description": "List of ConfigMap definitions with name, type, and data." }
+          }
+        },
+        "secrets": {
+          "type": "object",
+          "description": "Secret-based plugin configuration (for sensitive .spc files with credentials).",
+          "properties": {
+            "enabled": { "type": "boolean", "description": "Create Secrets from config entries." },
+            "config":  { "type": "array", "description": "List of Secret definitions with name, type, and data." }
+          }
+        }
+      }
+    },
+    "initContainer": {
+      "type": "object",
+      "description": "Init container configuration. Installs Steampipe plugins before the main container starts.",
+      "properties": {
+        "image": {
+          "type": "object",
+          "description": "Init container image config. Uses the same repository and tag as the main image, but allows a separate pullPolicy.",
+          "properties": {
+            "repository": { "type": "string", "description": "Image repository. Should match the main image." },
+            "tag":        { "type": "string", "description": "Image tag. Should match the main image." },
+            "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"], "description": "Pull policy for the init container." }
+          }
+        },
+        "securityContext":    { "type": "object", "description": "Security context for the init container." },
+        "resources":          { "type": "object", "description": "CPU/memory resource requests and limits for the init container." },
+        "plugins":            { "type": "array", "description": "List of Steampipe plugins to install (e.g., ['aws', 'gcp', 'kubernetes'])." },
+        "mods":               { "type": "array", "description": "DEPRECATED: Mods are no longer managed by Steampipe v2. Use Powerpipe." },
+        "extraInitVolumeMount": { "type": "array", "description": "Additional volume mounts for the init container." }
+      }
+    },
+    "oauth2Proxy": {
+      "type": "object",
+      "description": "Toggle for the oauth2-proxy sub-chart. Set enabled=true to deploy oauth2-proxy alongside Steampipe.",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Deploy oauth2-proxy sub-chart." }
+      }
+    },
+    "oauth2-proxy": {
+      "type": "object",
+      "description": "Configuration passed directly to the oauth2-proxy sub-chart. See https://github.com/oauth2-proxy/manifests for all options."
+    },
+    "powerpipe": {
+      "type": "object",
+      "description": "Powerpipe deployment configuration. Provides web dashboards, benchmarks, and compliance checks on top of Steampipe's PostgreSQL endpoint.",
+      "properties": {
+        "enabled":     { "type": "boolean", "description": "Deploy Powerpipe alongside Steampipe. Requires bbdd.enabled=true and bbdd.listen=network." },
+        "image": {
+          "type": "object",
+          "description": "Powerpipe container image configuration.",
+          "properties": {
+            "repository": { "type": "string", "description": "Container image repository (default: ghcr.io/turbot/powerpipe)." },
+            "tag":        { "type": "string", "description": "Image tag." },
+            "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"], "description": "Image pull policy." }
+          }
+        },
+        "replicaCount":         { "type": "integer", "minimum": 1, "description": "Number of Powerpipe replicas." },
+        "port":                 { "type": "integer", "minimum": 1, "maximum": 65535, "description": "HTTP server port (default: 9033)." },
+        "listen":               { "type": "string", "description": "Listen mode: 'local' or 'network'." },
+        "serviceType":          { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"], "description": "Kubernetes Service type." },
+        "serviceAccount": {
+          "type": "object",
+          "description": "ServiceAccount override for Powerpipe. Leave empty to reuse Steampipe's SA.",
+          "properties": {
+            "name": { "type": "string", "description": "ServiceAccount name. Empty = reuse Steampipe's SA." }
+          }
+        },
+        "svcAnnotations":       { "type": "object", "description": "Annotations for the Powerpipe Service." },
+        "deploymentAnnotations": { "type": "object", "description": "Annotations for the Powerpipe Deployment." },
+        "podAnnotations":       { "type": "object", "description": "Annotations for Powerpipe pods." },
+        "mods":                 { "type": "array", "description": "Powerpipe mods to install (e.g., github.com/turbot/steampipe-mod-aws-compliance)." },
+        "env":                  { "type": "array", "description": "Extra environment variables for the Powerpipe container." },
+        "envFrom":              { "type": "array", "description": "Environment variable sources (ConfigMap/Secret)." },
+        "podSecurityContext":   { "type": "object", "description": "Pod-level security context for Powerpipe." },
+        "securityContext":      { "type": "object", "description": "Container-level security context for Powerpipe." },
+        "resources":            { "type": "object", "description": "CPU/memory resource requests and limits." },
+        "ingress": {
+          "type": "object",
+          "description": "Powerpipe Ingress (HTTP — works with standard Ingress controllers, unlike Steampipe's TCP endpoint).",
+          "properties": {
+            "enabled":     { "type": "boolean", "description": "Create an Ingress for Powerpipe." },
+            "className":   { "type": "string", "description": "Ingress class name." },
+            "annotations": { "type": "object", "description": "Ingress annotations." },
+            "hosts":       { "type": "array", "description": "Ingress host rules." },
+            "tls":         { "type": "array", "description": "TLS configuration." }
+          }
+        },
+        "nodeSelector":    { "type": "object", "description": "Node selector for Powerpipe pods." },
+        "tolerations":     { "type": "array", "description": "Tolerations for Powerpipe pods." },
+        "affinity":        { "type": "object", "description": "Affinity rules for Powerpipe pods." },
+        "extraVolumeMount": { "type": "array", "description": "Additional volume mounts." },
+        "extraVolumes":    { "type": "array", "description": "Additional volumes." }
+      }
+    }
+  }
+}

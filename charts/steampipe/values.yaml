@@ -41,9 +41,10 @@ podAnnotations: {}
 deploymentAnnotations: {}
 
 # -- Privilege and access control settings for a Pod or Container
+# Steampipe runs as UID=9193, GID=0 (root group for OpenShift compatibility)
 podSecurityContext:
   fsGroup: 9193
-  runAsGroup: 65534
+  runAsGroup: 0
   runAsUser: 9193
 
 # -- Privilege and access control settings
@@ -61,14 +62,19 @@ command: []
 #  - "--database-password=1234"
 
 # -- Arguments for Pod
+# Only --foreground is required. Use STEAMPIPE_DATABASE_PASSWORD env var (via a
+# Kubernetes Secret) to set a stable password instead of relying on the random one.
 args:
   - "--foreground"
-  - "--show-password"
 
 # -- Environment variables to configure application
+# STEAMPIPE_UPDATE_CHECK and STEAMPIPE_TELEMETRY are recommended for Kubernetes deployments
+# Ref: https://steampipe.io/docs/reference/env-vars/overview
 env:
-  - name: STEAMPIPE_LOG_LEVEL
-    value: "TRACE"
+  - name: STEAMPIPE_UPDATE_CHECK
+    value: "false"
+  - name: STEAMPIPE_TELEMETRY
+    value: "none"
 
 # -- Variables from file
 envFrom: []
@@ -102,7 +108,9 @@ startupProbe: {}
 #  failureThreshold: 60
 #  periodSeconds: 5
 
-# -- Configure BBDD for Steampipe
+# -- Configure BBDD (database) endpoint for Steampipe
+# When enabled, creates a ClusterIP service on the PostgreSQL port (9193) so
+# other pods can connect using any PostgreSQL-compatible client.
 bbdd:
   enabled: false
   svcAnnotations: {}
@@ -110,8 +118,14 @@ bbdd:
   #  external-dns.alpha.kubernetes.io/hostname:
   port: 9193
   listen: "network"
+  # -- Service type for the bbdd service. ClusterIP is recommended for internal
+  # access; use LoadBalancer or NodePort only if external access is required.
+  serviceType: ClusterIP
 
-# -- Enable dashboard for Steampipe
+# -- Dashboard section is DEPRECATED in Steampipe v2.x
+# The built-in dashboard feature was moved to Powerpipe (https://powerpipe.io).
+# This section is retained for reference only and has no effect on v2.x deployments.
+# @ignored
 dashboard:
   enabled: false
   svcAnnotations: {}
@@ -119,6 +133,13 @@ dashboard:
   listen: "network"
 
 # -- Ingress configuration to expose app
+# ⚠️  WARNING: Steampipe exposes a PostgreSQL endpoint (TCP), NOT HTTP.
+# Standard Kubernetes Ingress operates at L7 (HTTP/HTTPS) and will NOT work
+# for PostgreSQL connections. You need a TCP-capable Ingress controller:
+#   - NGINX: use TCP services ConfigMap (https://kubernetes.github.io/ingress-nginx/user-guide/exposing-tcp-udp-services/)
+#   - Traefik: use IngressRouteTCP CRD
+#   - HAProxy: supports TCP mode natively
+# For most use cases, a ClusterIP or LoadBalancer service (bbdd.serviceType) is simpler.
 ingress:
   enabled: false
   className: ""
@@ -131,6 +152,7 @@ ingress:
       paths:
         - path: /
           pathType: ImplementationSpecific
+          port: 9193
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
@@ -240,6 +262,9 @@ extraConfig:
                 client-key: path/to/my/client/key
 
 # -- Configure initContainers
+# The init container installs Steampipe plugins before the main container starts.
+# It uses the same image (repository + tag) as the main container to ensure CLI compatibility.
+# The pullPolicy can be set independently (e.g., Always for init, IfNotPresent for main).
 initContainer:
   image:
     repository: ghcr.io/turbot/steampipe
@@ -259,16 +284,13 @@ initContainer:
   # - "openshift"
   # - "terraform"
 
-  # -- Configure Steampipe mods
-  # Ref: https://hub.steampipe.io/mods
+  # -- @deprecated mods are no longer managed by Steampipe v2.
+  # Use Powerpipe (https://powerpipe.io) to install and run mods.
+  # This field is kept for backwards compatibility but has no effect.
   mods: []
-  #  - "github.com/turbot/steampipe-mod-azure-insights"
-  #  - "github.com/turbot/steampipe-mod-azure-compliance"
-  #  - "github.com/turbot/steampipe-mod-azure-tags"
-  #  - "github.com/turbot/steampipe-mod-terraform-azure-compliance"
 
   # -- The resources limits and requested
-
+  resources: {}
   # limits:
   #   cpu: "1500m"
   #   memory: 2048Mi
@@ -306,6 +328,116 @@ extraObjects: []
 # --  Deploys oauth2-proxy, a reverse proxy that provides authentication with Google, Github or other providers
 oauth2Proxy:
   enabled: false
+
+# -------------------------------------------------------------------
+# Powerpipe — Dashboards, benchmarks, and compliance on top of Steampipe
+# Ref: https://powerpipe.io
+# Image: ghcr.io/turbot/powerpipe
+# -------------------------------------------------------------------
+
+# -- Enable deployment alongside Steampipe
+# Powerpipe provides a web dashboard (HTTP) for running benchmarks and compliance checks.
+# Requires bbdd.enabled=true (Powerpipe connects to Steampipe's PostgreSQL endpoint).
+powerpipe:
+  enabled: false
+
+  # -- Powerpipe container image
+  image:
+    repository: ghcr.io/turbot/powerpipe
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  # -- Number of Powerpipe replicas
+  replicaCount: 1
+
+  # -- HTTP server port (default: 9033)
+  port: 9033
+
+  # -- Listen mode: "local" (localhost) or "network" (all interfaces)
+  listen: "network"
+
+  # -- Service type for the Powerpipe HTTP endpoint
+  serviceType: ClusterIP
+
+  # -- Powerpipe ServiceAccount override
+  # By default Powerpipe reuses Steampipe's ServiceAccount.
+  # Set a custom name if Powerpipe should NOT inherit Steampipe's cloud IAM credentials (IRSA, Workload Identity).
+  serviceAccount:
+    name: ""
+
+  # -- Service annotations
+  svcAnnotations: {}
+
+  # -- Deployment annotations
+  deploymentAnnotations: {}
+
+  # -- Pod annotations
+  podAnnotations: {}
+
+  # -- Powerpipe mods to install (installed by init container)
+  # Ref: https://hub.powerpipe.io/mods
+  mods: []
+  # - github.com/turbot/steampipe-mod-aws-compliance
+  # - github.com/turbot/steampipe-mod-aws-well-architected
+  # - github.com/turbot/steampipe-mod-kubernetes-compliance
+
+  # -- Additional environment variables for Powerpipe
+  # POWERPIPE_DATABASE is auto-configured to point to the Steampipe service.
+  # Ref: https://powerpipe.io/docs/reference/env-vars
+  env: []
+  # - name: POWERPIPE_LOG_LEVEL
+  #   value: "info"
+  # - name: POWERPIPE_BENCHMARK_TIMEOUT
+  #   value: "600"
+
+  # -- Environment variable sources (ConfigMap/Secret references)
+  envFrom: []
+
+  # -- Powerpipe pod security context
+  podSecurityContext: {}
+
+  # -- Powerpipe container security context
+  securityContext: {}
+
+  # -- Powerpipe resource requests and limits
+  resources: {}
+  # limits:
+  #   cpu: "1000m"
+  #   memory: 1024Mi
+  # requests:
+  #   cpu: 500m
+  #   memory: 512Mi
+
+  # -- Powerpipe Ingress (HTTP — works with standard Ingress controllers)
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: powerpipe.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            port: 9033
+    tls: []
+    #  - secretName: powerpipe-tls
+    #    hosts:
+    #      - powerpipe.example.com
+
+  # -- Node selector for Powerpipe pods
+  nodeSelector: {}
+
+  # -- Tolerations for Powerpipe pods
+  tolerations: []
+
+  # -- Affinity rules for Powerpipe pods
+  affinity: {}
+
+  # -- Additional volume mounts for Powerpipe container
+  extraVolumeMount: []
+
+  # -- Additional volumes for Powerpipe pod
+  extraVolumes: []
 
 # --  Configuration for oauth2-proxy
 # Ref: https://github.com/oauth2-proxy/manifests/tree/oauth2-proxy-7.7.9/helm/oauth2-proxy

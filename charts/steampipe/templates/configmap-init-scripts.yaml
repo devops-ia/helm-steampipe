@@ -1,4 +1,4 @@
-{{- if or (.Values.initContainer.plugins) (.Values.initContainer.mods) }}
+{{- if .Values.initContainer.plugins }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,12 +12,6 @@ data:
     echo "Steampipe - Install Plugins"
     {{- range $key, $value := . }}
     steampipe plugin install {{ $value }}
-    {{- end }}
-{{- end }}
-{{- with .Values.initContainer.mods }}
-    echo "Steampipe - Install Mods"
-    {{- range $key, $value := . }}
-    steampipe mod install {{ $value }}
     {{- end }}
 {{- end }}
 {{- end }}

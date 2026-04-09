@@ -1,0 +1,72 @@
+name: Check Powerpipe release
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * *' # every day at 01:00 UTC (offset from Steampipe check)
+
+jobs:
+  check-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Get current Powerpipe version
+        id: current_release
+        run: |
+          current_release=$(yq eval '.powerpipe.image.tag' charts/steampipe/values.yaml)
+          echo "current_release=$current_release" >> $GITHUB_OUTPUT
+
+      - name: Install updatecli
+        uses: updatecli/updatecli-action@2cc8e6d8e356d76b0280cdd03766c36596a0614e # v3.0.0
+
+      - name: Update Powerpipe image tag
+        run: |
+          updatecli apply --config .github/updatecli/powerpipe-appversion.yaml --commit=false
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Get latest Powerpipe version
+        id: latest_release
+        run: |
+          latest_release=$(yq eval '.powerpipe.image.tag' charts/steampipe/values.yaml)
+          echo "latest_release=$latest_release" >> $GITHUB_OUTPUT
+
+      - name: Check if release changed
+        id: check_changes
+        run: |
+          if [ "${{ steps.latest_release.outputs.latest_release }}" != "${{ steps.current_release.outputs.current_release }}" ]; then
+            echo "release_changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update README.md Helm Chart
+        if: steps.check_changes.outputs.release_changed == 'true'
+        uses: losisin/helm-docs-github-action@2ccf3e77eb70dc80d62f8cc26f15d0a96b75fef4 # v1.8.0
+        with:
+          chart-search-root: charts/steampipe
+
+      - name: Create PR with changes
+        if: steps.check_changes.outputs.release_changed == 'true'
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        with:
+          token: ${{ secrets.PAT_GITHUB }}
+          commit-message: "fix: update powerpipe version to ${{ steps.latest_release.outputs.latest_release }}"
+          signoff: false
+          branch: chore/upgrade-powerpipe-${{ steps.latest_release.outputs.latest_release }}
+          delete-branch: true
+          title: '[powerpipe] new release: ${{ steps.latest_release.outputs.latest_release }}'
+          body: |
+            Powerpipe version:
+            - :information_source: Current: `${{ steps.current_release.outputs.current_release }}`
+            - :up: Upgrade: `${{ steps.latest_release.outputs.latest_release }}`
+
+            Changelog: https://github.com/turbot/powerpipe/releases/tag/v${{ steps.latest_release.outputs.latest_release }}
+          labels: |
+            auto-pr-bump-version
