@@ -1,0 +1,92 @@
+suite: deployment tests
+templates:
+  - templates/deployment.yaml
+
+tests:
+  - it: should use the correct image repository and tag by default
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "ghcr.io/devops-ia/steampipe:v2.4.1"
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: steampipe
+
+  - it: should set image pull policy to IfNotPresent by default
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: IfNotPresent
+
+  - it: should set pod security context with UID 9193 and GID 0
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 9193
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 0
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 9193
+
+  - it: should set container security context to run as non-root
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 9193
+
+  - it: should not create init containers when no plugins are configured
+    asserts:
+      - notExists:
+          path: spec.template.spec.initContainers
+
+  - it: should not expose database port when bbdd is disabled
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].ports
+
+  - it: should not set database probes when bbdd is disabled
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe
+
+  - it: should use custom image tag when overridden
+    set:
+      image.tag: v2.9.9
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "ghcr.io/devops-ia/steampipe:v2.9.9"
+
+  - it: should set default steampipe args
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --foreground
+
+  - it: should set telemetry disabled env var by default
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: STEAMPIPE_TELEMETRY
+            value: none
+
+  - it: should add podLabels to pod template labels
+    set:
+      podLabels:
+        team: platform
+        environment: prod
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.team
+          value: platform
+      - equal:
+          path: spec.template.metadata.labels.environment
+          value: prod

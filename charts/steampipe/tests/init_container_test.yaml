@@ -1,0 +1,111 @@
+suite: init container and plugin tests
+templates:
+  - templates/deployment.yaml
+  - templates/configmap-init-scripts.yaml
+
+tests:
+  - it: should not create init container or ConfigMap when no plugins configured
+    templates:
+      - templates/configmap-init-scripts.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create ConfigMap when plugins are configured
+    set:
+      initContainer.plugins:
+        - aws
+        - kubernetes
+    templates:
+      - templates/configmap-init-scripts.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-steampipe-scripts
+
+  - it: should create init container when plugins are configured
+    set:
+      initContainer.plugins:
+        - aws
+    templates:
+      - templates/deployment.yaml
+    asserts:
+      - exists:
+          path: spec.template.spec.initContainers
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: init
+
+  - it: should use the same image as the main container for init container
+    set:
+      initContainer.plugins:
+        - aws
+    templates:
+      - templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: "ghcr.io/devops-ia/steampipe:v2.4.1"
+
+  - it: should run init script from ConfigMap
+    set:
+      initContainer.plugins:
+        - aws
+    templates:
+      - templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].command
+          value:
+            - sh
+            - /var/steampipe_scripts/init.sh
+
+  - it: should create emptyDir volumes for plugin directories
+    set:
+      initContainer.plugins:
+        - aws
+    templates:
+      - templates/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: plugins
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: config
+            emptyDir: {}
+
+  - it: should mount plugin volumes in the main container when plugins configured
+    set:
+      initContainer.plugins:
+        - aws
+    templates:
+      - templates/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: plugins
+            mountPath: /home/steampipe/.steampipe/plugins
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /home/steampipe/.steampipe/config
+
+  - it: should use custom pullPolicy for init container
+    set:
+      initContainer.plugins:
+        - aws
+      initContainer.image.pullPolicy: Always
+    templates:
+      - templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].imagePullPolicy
+          value: Always

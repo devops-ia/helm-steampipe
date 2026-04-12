@@ -69,7 +69,7 @@ The chart deploys Steampipe in **service mode** — a persistent PostgreSQL endp
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-Plugin config files (`.spc`) are mounted from ConfigMaps or Secrets into `/home/steampipe/.steampipe/config/`.
+Plugin config files (`.spc`) are mounted from Kubernetes Secrets or ConfigMaps into `/home/steampipe/.steampipe/config/` via `extraVolumes` / `extraVolumeMount`.
 
 ---
 
@@ -85,8 +85,21 @@ psql -h localhost -p 9193 -U steampipe
 
 ### 2 — AWS plugin with IAM credentials
 
+Create a Kubernetes Secret containing the connection file:
+
+```console
+kubectl create secret generic aws-credentials \
+  --from-literal=aws.spc='connection "aws" {
+  plugin     = "aws"
+  access_key = "AKIAIOSFODNN7EXAMPLE"
+  secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  regions    = ["us-east-1", "us-west-2"]
+}'
+```
+
+Then in `values.yaml`:
+
 ```yaml
-# values.yaml
 initContainer:
   plugins:
     - aws
@@ -94,31 +107,16 @@ initContainer:
 bbdd:
   enabled: true
 
-extraConfig:
-  secrets:
-    enabled: true
-    config:
-      - name: aws-credentials
-        type: Opaque
-        data:
-          aws.spc: |
-            connection "aws" {
-              plugin     = "aws"
-              access_key = "AKIAIOSFODNN7EXAMPLE"
-              secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-              regions    = ["us-east-1", "us-west-2"]
-            }
+extraVolumes:
+  - name: aws-credentials
+    secret:
+      secretName: aws-credentials
 
 extraVolumeMount:
   - name: aws-credentials
     mountPath: /home/steampipe/.steampipe/config/aws.spc
     subPath: aws.spc
     readOnly: true
-
-extraVolumes:
-  - name: aws-credentials
-    secret:
-      secretName: aws-credentials
 ```
 
 Then query:
@@ -133,9 +131,9 @@ ORDER BY region;
 ### 3 — Kubernetes plugin (in-cluster)
 
 ```yaml
-# values.yaml
 serviceAccount:
   create: true
+  automountServiceAccountToken: true
 
 initContainer:
   plugins:
@@ -144,28 +142,30 @@ initContainer:
 bbdd:
   enabled: true
 
-extraConfig:
-  configMaps:
-    enabled: true
-    config:
-      - name: k8s-connection
-        type: Opaque
-        data:
-          kubernetes.spc: |
-            connection "kubernetes" {
-              plugin = "kubernetes"
-            }
+extraVolumes:
+  - name: k8s-connection
+    configMap:
+      name: k8s-connection
 
 extraVolumeMount:
   - name: k8s-connection
     mountPath: /home/steampipe/.steampipe/config/kubernetes.spc
     subPath: kubernetes.spc
     readOnly: true
+```
 
-extraVolumes:
-  - name: k8s-connection
-    configMap:
-      name: k8s-connection
+Create the ConfigMap separately:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k8s-connection
+data:
+  kubernetes.spc: |
+    connection "kubernetes" {
+      plugin = "kubernetes"
+    }
 ```
 
 ```sql
@@ -178,6 +178,8 @@ ORDER BY namespace, name;
 
 ### 4 — Multi-cloud (AWS + GCP + Azure)
 
+Create a Secret with all connection files, then mount them:
+
 ```yaml
 initContainer:
   plugins:
@@ -188,29 +190,10 @@ initContainer:
 bbdd:
   enabled: true
 
-extraConfig:
-  secrets:
-    enabled: true
-    config:
-      - name: cloud-connections
-        type: Opaque
-        data:
-          aws.spc: |
-            connection "aws" {
-              plugin  = "aws"
-              regions = ["*"]
-            }
-          gcp.spc: |
-            connection "gcp" {
-              plugin  = "gcp"
-              project = "my-gcp-project"
-            }
-          azure.spc: |
-            connection "azure" {
-              plugin          = "azure"
-              tenant_id       = "00000000-0000-0000-0000-000000000000"
-              subscription_id = "00000000-0000-0000-0000-000000000000"
-            }
+extraVolumes:
+  - name: cloud-connections
+    secret:
+      secretName: cloud-connections
 
 extraVolumeMount:
   - name: cloud-connections
@@ -225,19 +208,17 @@ extraVolumeMount:
     mountPath: /home/steampipe/.steampipe/config/azure.spc
     subPath: azure.spc
     readOnly: true
-
-extraVolumes:
-  - name: cloud-connections
-    secret:
-      secretName: cloud-connections
 ```
 
 ### 5 — Stable database password via Secret
 
-By default Steampipe generates a random password on each start. Set a stable one via Secret:
+By default Steampipe generates a random password on each start. Set a stable one:
+
+```console
+kubectl create secret generic steampipe-password --from-literal=password=your-stable-password
+```
 
 ```yaml
-# values.yaml
 env:
   - name: STEAMPIPE_DATABASE_PASSWORD
     valueFrom:
@@ -250,51 +231,7 @@ env:
     value: "none"
 ```
 
-```console
-kubectl create secret generic steampipe-password --from-literal=password=your-stable-password
-```
-
-### 6 — Expose via Ingress + OAuth2 Proxy
-
-Steampipe does not provide built-in authentication. When exposing the PostgreSQL endpoint
-over an Ingress, it is strongly recommended to place an authentication layer in front of it.
-
-This chart bundles [oauth2-proxy](https://oauth2-proxy.github.io/oauth2-proxy/) as an
-optional sub-chart. Enable it with:
-
-```yaml
-# values.yaml
-bbdd:
-  enabled: true
-
-ingress:
-  enabled: true
-  className: nginx
-  hosts:
-    - host: steampipe.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-          port: 9193
-
-oauth2Proxy:
-  enabled: true
-
-oauth2-proxy:
-  config:
-    clientID: "your-client-id"
-    clientSecret: "your-client-secret"
-    # openssl rand -base64 32 | head -c 32 | base64
-    cookieSecret: "your-32-byte-base64-secret"
-    configFile: |-
-      email_domains = [ "yourcompany.com" ]
-      upstreams = [ "http://steampipe-psql:9193" ]
-```
-
-For provider-specific configuration (Keycloak, Okta, Microsoft Entra ID, GitHub, etc.),
-refer to the [official oauth2-proxy provider documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/).
-
-### 7 — Connect from Grafana or BI tools
+### 6 — Connect from Grafana or BI tools
 
 Steampipe exposes a standard PostgreSQL interface. Point any Postgres datasource to:
 
@@ -306,54 +243,6 @@ Steampipe exposes a standard PostgreSQL interface. Point any Postgres datasource
 | Username | `steampipe`                                   |
 | Password | value of `STEAMPIPE_DATABASE_PASSWORD`        |
 | SSL Mode | `disable` (within cluster)                    |
-
-### 8 — Powerpipe: dashboards & compliance benchmarks
-
-[Powerpipe](https://powerpipe.io) provides a web dashboard for running compliance benchmarks and visualizing cloud posture. This chart deploys it as a separate pod connected to Steampipe's PostgreSQL endpoint.
-
-> **Requirements:** `bbdd.enabled=true` and `bbdd.listen="network"` — Powerpipe needs the PostgreSQL Service accessible over the network.
-
-```yaml
-# values.yaml
-initContainer:
-  plugins:
-    - aws
-
-bbdd:
-  enabled: true
-  listen: "network"
-
-env:
-  - name: STEAMPIPE_DATABASE_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: steampipe-password
-        key: password
-
-powerpipe:
-  enabled: true
-  image:
-    repository: ghcr.io/turbot/powerpipe
-    tag: "latest"
-  mods:
-    - github.com/turbot/steampipe-mod-aws-compliance
-  env:
-    - name: STEAMPIPE_DATABASE_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: steampipe-password
-          key: password
-  ingress:
-    enabled: true
-    className: nginx
-    hosts:
-      - host: powerpipe.example.com
-        paths:
-          - path: /
-            pathType: Prefix
-```
-
-Browse available mods at [hub.powerpipe.io/mods](https://hub.powerpipe.io/mods).
 
 ---
 
@@ -407,38 +296,37 @@ initContainer:
     - kubernetes
 ```
 
-### Step 2 — Create connection files
+### Step 2 — Create connection files as Kubernetes Secrets or ConfigMaps
 
-Each plugin needs a `.spc` file defining connection parameters. Create them as ConfigMaps (non-sensitive) or Secrets (with credentials):
+Each plugin needs a `.spc` file defining connection parameters. Create them as Kubernetes Secrets (with credentials) or ConfigMaps (for non-sensitive config):
 
 ```yaml
-extraConfig:
-  secrets:
-    enabled: true
-    config:
-      - name: steampipe-connections
-        type: Opaque
-        data:
-          aws.spc: |
-            connection "aws" {
-              plugin  = "aws"
-              regions = ["us-east-1"]
-            }
+apiVersion: v1
+kind: Secret
+metadata:
+  name: steampipe-connections
+type: Opaque
+stringData:
+  aws.spc: |
+    connection "aws" {
+      plugin  = "aws"
+      regions = ["us-east-1"]
+    }
 ```
 
 ### Step 3 — Mount into the config directory
 
 ```yaml
+extraVolumes:
+  - name: steampipe-connections
+    secret:
+      secretName: steampipe-connections
+
 extraVolumeMount:
   - name: steampipe-connections
     mountPath: /home/steampipe/.steampipe/config/aws.spc
     subPath: aws.spc
     readOnly: true
-
-extraVolumes:
-  - name: steampipe-connections
-    secret:
-      secretName: steampipe-connections
 ```
 
 ### Using cloud provider workload identity (recommended)
@@ -549,22 +437,64 @@ env:
 
 ## Upgrading
 
-### v2.x → v3.0.0
+### v3.x → v4.0.0
 
-**New features:**
-
-| Feature | Description |
-|---------|-------------|
-| Powerpipe integration | Deploy Powerpipe alongside Steampipe for dashboards, benchmarks, and compliance checks. Set `powerpipe.enabled: true`. |
-| Powerpipe Ingress | Standard HTTP Ingress for Powerpipe dashboard (works with any Ingress controller). |
-| Powerpipe mods | Install compliance mods via `powerpipe.mods[]` (e.g., AWS CIS, NIST, PCI DSS). |
-| Fail-fast validations | `powerpipe.enabled=true` requires `bbdd.enabled=true` and `bbdd.listen="network"`. |
-
-**Deprecations:**
+**Breaking changes:**
 
 | Change | Migration action |
 |--------|-----------------|
-| Steampipe Ingress | Steampipe Ingress (TCP/PostgreSQL) is discouraged. Use `powerpipe.ingress` for HTTP dashboard access, or `bbdd.serviceType: LoadBalancer` for direct PostgreSQL access. |
+| `powerpipe.*` removed | Powerpipe is now a separate Helm chart. Remove `powerpipe.*` from values. |
+| `oauth2Proxy.*` / `oauth2-proxy` sub-chart removed | Manage authentication externally. Remove `oauth2Proxy.*` from values. |
+| `extraConfig.*` removed | Use `extraVolumes` + `extraVolumeMount` with standard Kubernetes Secrets/ConfigMaps instead. |
+| `dashboard.*` removed | Already removed in v2. If still present, remove. |
+| `initContainer.image.repository` / `initContainer.image.tag` removed | Init container now uses the same image as the main container automatically. |
+| Image registry changed | Changed from `ghcr.io/turbot/steampipe` to `ghcr.io/devops-ia/steampipe`. |
+
+**Migration steps:**
+
+1. Back up current values:
+   ```console
+   helm get values my-steampipe > values-backup.yaml
+   ```
+
+2. Remove deprecated fields:
+   - Delete `powerpipe.*` section entirely
+   - Delete `oauth2Proxy.*` and `oauth2-proxy.*` sections
+   - Delete `extraConfig.*` section
+   - Delete `initContainer.image.repository` and `initContainer.image.tag`
+
+3. Migrate `extraConfig` Secrets/ConfigMaps to standard Kubernetes resources + `extraVolumes`/`extraVolumeMount`:
+   ```yaml
+   # Before (v3):
+   extraConfig:
+     secrets:
+       enabled: true
+       config:
+         - name: aws-credentials
+           data:
+             aws.spc: |
+               connection "aws" { plugin = "aws" }
+
+   # After (v4): create the Secret separately, then:
+   extraVolumes:
+     - name: aws-credentials
+       secret:
+         secretName: aws-credentials
+   extraVolumeMount:
+     - name: aws-credentials
+       mountPath: /home/steampipe/.steampipe/config/aws.spc
+       subPath: aws.spc
+       readOnly: true
+   ```
+
+4. Upgrade:
+   ```console
+   helm upgrade my-steampipe steampipe/steampipe -f values.yaml
+   ```
+
+### v2.x → v3.0.0
+
+Powerpipe was integrated in v3. Powerpipe has since been extracted to a standalone chart (v4+).
 
 ### v1.x → v2.0.0
 
@@ -572,43 +502,11 @@ env:
 
 | Change | Migration action |
 |--------|-----------------|
-| `dashboard` removed | Remove `dashboard.*` from values. Use [Powerpipe](https://powerpipe.io) for dashboards. Setting `dashboard.enabled: true` now causes a hard error. |
-| `mods` removed | Remove `initContainer.mods[]`. Install mods via Powerpipe. |
-| Default service type | `bbdd.serviceType` changed from `LoadBalancer` to `ClusterIP`. Set explicitly if you need `LoadBalancer`. |
-| `--show-password` removed | Use `STEAMPIPE_DATABASE_PASSWORD` env var for stable passwords. |
-| `runAsGroup` corrected | Changed to `0` to match Steampipe image GID (OpenShift compatible). |
-| Chart path | Restructured: `charts/` → `charts/steampipe/` (standard helm-releaser layout). |
-
-**Migration steps:**
-
-1. Back up your current values:
-   ```console
-   helm get values my-steampipe > values-backup.yaml
-   ```
-
-2. Remove deprecated fields from your values file:
-   - Delete `dashboard.*` section entirely
-   - Delete `initContainer.mods[]` entries
-   - Remove `STEAMPIPE_LOG_LEVEL` from `env:` (not a valid Steampipe v2 env var)
-
-3. Add explicit password management:
-   ```console
-   kubectl create secret generic steampipe-password --from-literal=password=$(openssl rand -base64 24)
-   ```
-   Then add to values:
-   ```yaml
-   env:
-     - name: STEAMPIPE_DATABASE_PASSWORD
-       valueFrom:
-         secretKeyRef:
-           name: steampipe-password
-           key: password
-   ```
-
-4. Upgrade:
-   ```console
-   helm upgrade my-steampipe steampipe/steampipe -f values.yaml
-   ```
+| `dashboard` removed | Remove `dashboard.*` from values. |
+| `mods` removed | Remove `initContainer.mods[]`. |
+| Default service type | `bbdd.serviceType` changed from `LoadBalancer` to `ClusterIP`. |
+| `--show-password` removed | Use `STEAMPIPE_DATABASE_PASSWORD` env var. |
+| `runAsGroup` corrected | Changed to `0` (OpenShift compatible). |
 
 ---
 

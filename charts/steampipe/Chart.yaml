@@ -2,11 +2,12 @@ apiVersion: v2
 name: steampipe
 description: A Helm chart for Kubernetes to deploy Steampipe
 type: application
-version: 3.0.0
+version: 4.0.0
 appVersion: v2.4.1
 home: https://github.com/devops-ia/helm-steampipe
 sources:
-  - https://github.com/turbot/steampipe
+  - https://github.com/devops-ia/steampipe
+  - https://github.com/devops-ia/helm-steampipe
 maintainers:
   - name: amartingarcia
     email: adrianmg231189@gmail.com
@@ -14,8 +15,6 @@ maintainers:
     email: hello@ialejandro.rocks
 keywords:
   - steampipe
-dependencies:
-  - name: oauth2-proxy
-    version: 10.4.2
-    repository: https://oauth2-proxy.github.io/manifests/
-    condition: oauth2Proxy.enabled
+  - sql
+  - cloud
+  - devops

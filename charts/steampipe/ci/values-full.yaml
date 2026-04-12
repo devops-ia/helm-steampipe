@@ -49,18 +49,6 @@ serviceAccount:
 podAnnotations:
   prometheus.io/scrape: "false"
 
-extraConfig:
-  configMaps:
-    enabled: true
-    config:
-      - name: k8s-connection
-        type: Opaque
-        data:
-          kubernetes.spc: |
-            connection "kubernetes" {
-              plugin = "kubernetes"
-            }
-
 extraVolumeMount:
   - name: k8s-connection
     mountPath: /home/steampipe/.steampipe/config/kubernetes.spc

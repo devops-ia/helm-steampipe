@@ -2,7 +2,7 @@
   ⚠️  This Ingress exposes Steampipe's PostgreSQL (TCP) endpoint.
   Standard Kubernetes Ingress operates at L7 (HTTP/HTTPS) and will NOT work
   for PostgreSQL connections without a TCP-capable controller.
-  For HTTP dashboard access, use powerpipe.ingress instead.
+  See values.yaml ingress section for details.
 */}}
 {{- if .Values.ingress.enabled -}}
 {{- $fullName := include "steampipe.fullname" . -}}

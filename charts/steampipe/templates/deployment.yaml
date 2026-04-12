@@ -1,10 +1,3 @@
-{{- /*
-  Dashboard was removed in Steampipe v2.x and moved to Powerpipe (https://powerpipe.io).
-  Fail fast with a clear error if someone tries to enable it.
-*/}}
-{{- if .Values.dashboard.enabled }}
-  {{- fail "dashboard.enabled=true is not supported in Steampipe v2.x. The built-in dashboard was moved to Powerpipe (https://powerpipe.io). Please set dashboard.enabled=false." }}
-{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,6 +21,9 @@ spec:
       {{- end }}
       labels:
         {{- include "steampipe.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- if .Values.initContainer.plugins }}
       initContainers:
@@ -85,8 +81,8 @@ spec:
           envFrom:
             {{- toYaml .Values.envFrom | nindent 12 }}
           {{- end }}
-          ports:
           {{- if .Values.bbdd.enabled }}
+          ports:
             - name: bbdd
               containerPort: {{ .Values.bbdd.port }}
               protocol: TCP
@@ -164,6 +160,10 @@ spec:
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:

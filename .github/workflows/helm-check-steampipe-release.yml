@@ -67,6 +67,6 @@ jobs:
             - :information_source: Current: `${{ steps.current_release.outputs.current_release }}`
             - :up: Upgrade: `${{ steps.latest_release.outputs.latest_release }}`
 
-            Changelog: https://github.com/turbot/steampipe/releases/tag/v${{ steps.latest_release.outputs.latest_release }}
+            Changelog: https://github.com/devops-ia/steampipe/releases/tag/v${{ steps.latest_release.outputs.latest_release }}
           labels: |
             auto-pr-bump-version
