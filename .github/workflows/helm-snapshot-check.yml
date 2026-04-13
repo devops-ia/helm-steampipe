@@ -92,7 +92,7 @@ jobs:
 
       - name: Post snapshot diff comment
         if: steps.version_changed.outputs.changed == 'true'
-        uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2.9.0
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
         with:
           header: helm-snapshot-check
           message: |
@@ -105,7 +105,7 @@ jobs:
 
       - name: Post no-change comment
         if: steps.version_changed.outputs.changed == 'false'
-        uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2.9.0
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
         with:
           header: helm-snapshot-check
           message: |
