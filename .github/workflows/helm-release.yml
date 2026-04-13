@@ -22,8 +22,37 @@ jobs:
           VERSION=$(grep '^version:' charts/steampipe/Chart.yaml | awk '{print $2}')
           echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
 
-  release:
+  create-tag:
     needs: get-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      created: ${{ steps.tag.outputs.created }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Create version tag if it does not exist
+        id: tag
+        env:
+          TAG: ${{ needs.get-version.outputs.tag }}
+        run: |
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+            echo "Tag ${TAG} already exists, skipping release"
+            echo "created=false" >> $GITHUB_OUTPUT
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "${TAG}"
+            git push origin "${TAG}"
+            echo "created=true" >> $GITHUB_OUTPUT
+          fi
+
+  release:
+    needs: [get-version, create-tag]
+    if: needs.create-tag.outputs.created == 'true'
     permissions:
       contents: write
       packages: write
