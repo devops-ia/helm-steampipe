@@ -2,6 +2,30 @@ apiVersion: v1
 entries:
   steampipe:
   - apiVersion: v2
+    appVersion: v2.4.1
+    created: "2026-04-13T06:22:42.788271779Z"
+    description: A Helm chart for Kubernetes to deploy Steampipe
+    digest: 6b3187fc644912f7cbd90f178410310e3f068f5e5faa3e03dc87770e1646fa0e
+    home: https://github.com/devops-ia/helm-steampipe
+    keywords:
+    - steampipe
+    - sql
+    - cloud
+    - devops
+    maintainers:
+    - email: adrianmg231189@gmail.com
+      name: amartingarcia
+    - email: hello@ialejandro.rocks
+      name: ialejandro
+    name: steampipe
+    sources:
+    - https://github.com/devops-ia/steampipe
+    - https://github.com/devops-ia/helm-steampipe
+    type: application
+    urls:
+    - https://github.com/devops-ia/helm-steampipe/releases/download/v1.11.0/steampipe-1.11.0.tgz
+    version: 1.11.0
+  - apiVersion: v2
     appVersion: 0.22.0
     created: "2026-02-09T08:37:23.800247869Z"
     dependencies:
@@ -166,4 +190,4 @@ entries:
     urls:
     - https://github.com/devops-ia/helm-steampipe/releases/download/v1.7.0/steampipe-1.7.0.tgz
     version: 1.7.0
-generated: "2026-02-09T08:37:23.800278977Z"
+generated: "2026-04-13T06:22:42.788301715Z"
