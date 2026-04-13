@@ -9,7 +9,21 @@ on:
       - "charts/steampipe/**"
 
 jobs:
+  get-version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Get chart version from Chart.yaml
+        id: version
+        run: |
+          VERSION=$(grep '^version:' charts/steampipe/Chart.yaml | awk '{print $2}')
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+
   release:
+    needs: get-version
     permissions:
       contents: write
       packages: write
@@ -18,3 +32,4 @@ jobs:
     with:
       chart_name: steampipe
       charts_dir: charts
+      tag: ${{ needs.get-version.outputs.tag }}
