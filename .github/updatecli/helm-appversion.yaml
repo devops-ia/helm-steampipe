@@ -10,12 +10,21 @@ sources:
         pattern: ">=v2.0.0"
 conditions: {}
 targets:
-  chartVersion:
-    name: bump appversion
+  appVersion:
+    name: bump appVersion
     kind: helmchart
     spec:
       name: charts/steampipe
       file: Chart.yaml
       key: $.appVersion
-      versionincrement: patch
     sourceid: steampipe
+  chartVersion:
+    name: bump chart version
+    kind: helmchart
+    spec:
+      name: charts/steampipe
+      file: Chart.yaml
+      key: $.version
+    sourceid: steampipe
+    transformers:
+      - trimprefix: "v"
