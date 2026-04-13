@@ -1,0 +1,38 @@
+Steampipe has been deployed to {{ .Release.Namespace }}. Get the application URL and connection details:
+
+{{- if .Values.bbdd.enabled }}
+
+1. Get the PostgreSQL service endpoint:
+   kubectl get svc --namespace {{ .Release.Namespace }} {{ include "steampipe.fullname" . }}-psql
+
+2. Connect to Steampipe via port-forward:
+   kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "steampipe.fullname" . }}-psql {{ .Values.bbdd.port }}:{{ .Values.bbdd.port }}
+   psql -h localhost -p {{ .Values.bbdd.port }} -U steampipe
+
+3. Get the database password:
+   export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "steampipe.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+   kubectl logs --namespace {{ .Release.Namespace }} $POD_NAME | grep "Database Password"
+
+{{- else }}
+
+1. Steampipe is running but the database service is disabled.
+   To enable external access, set bbdd.enabled=true:
+   helm upgrade {{ .Release.Name }} steampipe/steampipe --set bbdd.enabled=true
+
+2. You can still connect via port-forward:
+   export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "steampipe.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+   kubectl port-forward --namespace {{ .Release.Namespace }} $POD_NAME 9193:9193
+   psql -h localhost -p 9193 -U steampipe
+
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+
+The Steampipe endpoint is exposed at:
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+
+{{- end }}

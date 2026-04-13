@@ -1,0 +1,3 @@
+# Minimal values — no plugins, no services, just the deployment
+---
+replicaCount: 1

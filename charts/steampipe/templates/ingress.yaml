@@ -1,3 +1,9 @@
+{{- /*
+  ⚠️  This Ingress exposes Steampipe's PostgreSQL (TCP) endpoint.
+  Standard Kubernetes Ingress operates at L7 (HTTP/HTTPS) and will NOT work
+  for PostgreSQL connections without a TCP-capable controller.
+  See values.yaml ingress section for details.
+*/}}
 {{- if .Values.ingress.enabled -}}
 {{- $fullName := include "steampipe.fullname" . -}}
 {{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
@@ -14,7 +20,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName }}-dashboard
+  name: {{ $fullName }}-ingress
   labels:
     {{- include "steampipe.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
@@ -48,7 +54,7 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $fullName }}
+                name: {{ $fullName }}-psql
                 port:
                   number: {{ .port }}
               {{- else }}

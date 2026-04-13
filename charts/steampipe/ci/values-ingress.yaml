@@ -1,0 +1,22 @@
+# Test: ingress with database service
+---
+replicaCount: 1
+
+bbdd:
+  enabled: true
+  port: 9193
+  listen: "network"
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: steampipe.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 9193
+  tls:
+    - secretName: steampipe-tls
+      hosts:
+        - steampipe.example.com

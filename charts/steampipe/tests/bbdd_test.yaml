@@ -1,0 +1,110 @@
+suite: database service tests
+templates:
+  - templates/service.yaml
+  - templates/deployment.yaml
+
+tests:
+  - it: should not create a service when bbdd is disabled
+    templates:
+      - templates/service.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create a service when bbdd.enabled is true
+    set:
+      bbdd.enabled: true
+    templates:
+      - templates/service.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-steampipe-psql
+
+  - it: should set the service port to 9193 by default
+    set:
+      bbdd.enabled: true
+    templates:
+      - templates/service.yaml
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 9193
+      - equal:
+          path: spec.ports[0].name
+          value: bbdd
+
+  - it: should set ClusterIP service type by default
+    set:
+      bbdd.enabled: true
+    templates:
+      - templates/service.yaml
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+
+  - it: should set LoadBalancer service type when configured
+    set:
+      bbdd.enabled: true
+      bbdd.serviceType: LoadBalancer
+    templates:
+      - templates/service.yaml
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+
+  - it: should add database-listen flag when bbdd.enabled=true with network listen
+    set:
+      bbdd.enabled: true
+      bbdd.listen: network
+      bbdd.port: 9193
+    templates:
+      - templates/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --database-listen=network
+
+  - it: should add database-port flag when bbdd.enabled=true
+    set:
+      bbdd.enabled: true
+      bbdd.port: 9193
+    templates:
+      - templates/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --database-port=9193
+
+  - it: should configure TCP probes on bbdd port when bbdd.enabled=true
+    set:
+      bbdd.enabled: true
+    templates:
+      - templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.tcpSocket.port
+          value: bbdd
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.tcpSocket.port
+          value: bbdd
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.tcpSocket.port
+          value: bbdd
+
+  - it: should expose containerPort 9193 when bbdd.enabled=true
+    set:
+      bbdd.enabled: true
+    templates:
+      - templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 9193
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].name
+          value: bbdd

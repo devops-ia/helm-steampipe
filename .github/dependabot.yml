@@ -20,3 +20,20 @@ updates:
     rebase-strategy: auto
     pull-request-branch-name:
       separator: "-"
+
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    labels:
+      - enhancement
+      - dependency-management
+    assignees:
+      - devops-ia/devops-ia
+    commit-message:
+      prefix: chore
+      include: scope
+    rebase-strategy: auto
+    pull-request-branch-name:
+      separator: "-"

@@ -1,0 +1,115 @@
+name: CLI Snapshot Drift Check
+
+on:
+  pull_request:
+    paths:
+      - "charts/steampipe/Chart.yaml"
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  snapshot-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Get appVersion from PR head
+        id: new_version
+        run: |
+          version=$(grep appVersion charts/steampipe/Chart.yaml | awk '{ print $2 }' | tr -d '"')
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Checkout PR base
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+
+      - name: Get appVersion from PR base
+        id: old_version
+        run: |
+          chart_file="base/charts/steampipe/Chart.yaml"
+          if [ -f "$chart_file" ]; then
+            version=$(grep appVersion "$chart_file" | awk '{ print $2 }' | tr -d '"')
+          else
+            version=""
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Check if appVersion changed
+        id: version_changed
+        run: |
+          if [ "${{ steps.new_version.outputs.version }}" != "${{ steps.old_version.outputs.version }}" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Fetch old CLI snapshot
+        if: steps.version_changed.outputs.changed == 'true'
+        run: |
+          curl -sSf \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            "https://api.github.com/repos/devops-ia/steampipe/contents/cli-snapshot.json?ref=${{ steps.old_version.outputs.version }}" \
+            -o old-snapshot.json
+
+      - name: Fetch new CLI snapshot
+        if: steps.version_changed.outputs.changed == 'true'
+        run: |
+          curl -sSf \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            "https://api.github.com/repos/devops-ia/steampipe/contents/cli-snapshot.json?ref=${{ steps.new_version.outputs.version }}" \
+            -o new-snapshot.json
+
+      - name: Compare snapshots
+        id: compare
+        if: steps.version_changed.outputs.changed == 'true'
+        run: |
+          set +e
+          python3 .github/scripts/compare_snapshots.py old-snapshot.json new-snapshot.json \
+            --output-md snapshot-diff.md
+          exit_code=$?
+          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
+          set -e
+
+      - name: Read diff markdown
+        id: diff_md
+        if: steps.version_changed.outputs.changed == 'true'
+        run: |
+          if [ ! -f snapshot-diff.md ]; then
+            echo "⚠️ Snapshot comparison failed — diff unavailable." > snapshot-diff.md
+          fi
+          {
+            echo "content<<SNAPSHOT_DIFF_EOF"
+            cat snapshot-diff.md
+            echo "SNAPSHOT_DIFF_EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Post snapshot diff comment
+        if: steps.version_changed.outputs.changed == 'true'
+        uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2.9.0
+        with:
+          header: helm-snapshot-check
+          message: |
+            <!-- helm-snapshot-check -->
+            ### 🔍 Steampipe CLI Snapshot Check
+
+            appVersion changed: `${{ steps.old_version.outputs.version }}` → `${{ steps.new_version.outputs.version }}`
+
+            ${{ steps.diff_md.outputs.content }}
+
+      - name: Post no-change comment
+        if: steps.version_changed.outputs.changed == 'false'
+        uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2.9.0
+        with:
+          header: helm-snapshot-check
+          message: |
+            <!-- helm-snapshot-check -->
+            ### 🔍 Steampipe CLI Snapshot Check
+
+            ℹ️ `appVersion` did not change in this PR — no CLI drift check needed.

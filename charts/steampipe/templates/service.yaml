@@ -1,0 +1,21 @@
+{{- if .Values.bbdd.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "steampipe.fullname" . }}-psql
+  labels:
+    {{- include "steampipe.labels" . | nindent 4 }}
+  {{- with .Values.bbdd.svcAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.bbdd.serviceType | default "ClusterIP" }}
+  ports:
+    - name: bbdd
+      port: {{ .Values.bbdd.port }}
+      targetPort: bbdd
+      protocol: TCP
+  selector:
+    {{- include "steampipe.selectorLabels" . | nindent 4 }}
+{{- end }}

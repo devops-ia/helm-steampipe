@@ -2,18 +2,20 @@ sources:
   steampipe:
     kind: githubrelease
     spec:
-      owner: "turbot"
+      owner: "devops-ia"
       repository: "steampipe"
       token: {{ requiredEnv "GITHUB_TOKEN" }}
       versionFilter:
         kind: semver
-    transformers:
-      - trimprefix: "v"
+        pattern: ">=v2.0.0"
 conditions: {}
 targets:
   chartVersion:
     name: bump appversion
-    kind: yaml
+    kind: helmchart
     spec:
-      file: charts/Chart.yaml
+      name: charts/steampipe
+      file: Chart.yaml
       key: $.appVersion
+      versionincrement: patch
+    sourceid: steampipe

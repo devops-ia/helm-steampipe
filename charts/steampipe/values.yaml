@@ -1,0 +1,255 @@
+# Default values for steampipe.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+---
+# -- Number of replicas
+replicaCount: 1
+
+# -- Image registry
+image:
+  repository: ghcr.io/devops-ia/steampipe
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+# -- Registry secret names as an array
+imagePullSecrets: []
+
+# -- String to partially override steampipe.fullname template (will maintain the release name)
+nameOverride: ""
+
+# -- String to fully override steampipe.fullname template
+fullnameOverride: ""
+
+# -- Enable creation of ServiceAccount
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  # Specifies if you don't want the kubelet to automatically mount
+  # a ServiceAccount's API credentials
+  automountServiceAccountToken: false
+
+# -- Pod annotations
+podAnnotations: {}
+
+# -- Pod labels
+podLabels: {}
+
+# -- Deployment annotations
+deploymentAnnotations: {}
+
+# -- Privilege and access control settings for a Pod or Container
+# Steampipe runs as UID=9193, GID=0 (root group for OpenShift compatibility)
+podSecurityContext:
+  fsGroup: 9193
+  runAsGroup: 0
+  runAsUser: 9193
+
+# -- Privilege and access control settings
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 9193
+
+# -- Command for Pod
+command: []
+#  - "steampipe"
+#  - "service"
+#  - "start"
+#  - "--foreground"
+
+# -- Arguments for Pod
+# Only --foreground is required. Use STEAMPIPE_DATABASE_PASSWORD env var (via a
+# Kubernetes Secret) to set a stable password instead of relying on the random one.
+args:
+  - "--foreground"
+
+# -- Environment variables to configure application
+# STEAMPIPE_UPDATE_CHECK and STEAMPIPE_TELEMETRY are recommended for Kubernetes deployments
+# Ref: https://steampipe.io/docs/reference/env-vars/overview
+env:
+  - name: STEAMPIPE_UPDATE_CHECK
+    value: "false"
+  - name: STEAMPIPE_TELEMETRY
+    value: "none"
+
+# -- Variables from file
+envFrom: []
+
+# -- Configure liveness probe
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe: {}
+#  tcpSocket:
+#    port: bbdd
+#  initialDelaySeconds: 15
+#  periodSeconds: 10
+#  timeoutSeconds: 5
+#  failureThreshold: 5
+
+# -- Configure readinessProbe
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+readinessProbe: {}
+#  tcpSocket:
+#    port: bbdd
+#  initialDelaySeconds: 15
+#  periodSeconds: 5
+#  timeoutSeconds: 3
+#  failureThreshold: 3
+
+# -- Configure startupProbe
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+startupProbe: {}
+#  tcpSocket:
+#    port: bbdd
+#  periodSeconds: 10
+#  timeoutSeconds: 5
+#  failureThreshold: 18
+
+# -- Configure BBDD (database) endpoint for Steampipe
+# When enabled, creates a ClusterIP service on the PostgreSQL port (9193) so
+# other pods can connect using any PostgreSQL-compatible client.
+bbdd:
+  enabled: false
+  svcAnnotations: {}
+  port: 9193
+  listen: "network"
+  # -- Service type for the bbdd service. ClusterIP is recommended for internal
+  # access; use LoadBalancer or NodePort only if external access is required.
+  serviceType: ClusterIP
+
+# -- Ingress configuration to expose app
+# ⚠️  WARNING: Steampipe exposes a PostgreSQL endpoint (TCP), NOT HTTP.
+# Standard Kubernetes Ingress operates at L7 (HTTP/HTTPS) and will NOT work
+# for PostgreSQL connections. You need a TCP-capable Ingress controller:
+#   - NGINX: use TCP services ConfigMap (https://kubernetes.github.io/ingress-nginx/user-guide/exposing-tcp-udp-services/)
+#   - Traefik: use IngressRouteTCP CRD
+#   - HAProxy: supports TCP mode natively
+# For most use cases, a ClusterIP or LoadBalancer service (bbdd.serviceType) is simpler.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # kubernetes.io/ingress.class: nginx
+  # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+          port: 9193
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+# -- The resources limits and requested
+resources: {}
+#  We usually recommend not to specify default resources and to leave this as a conscious
+#  choice for the user. This also increases chances charts run on environments with little
+#  resources, such as Minikube. If you do want to specify resources, uncomment the following
+#  lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+#  limits:
+#    cpu: 100m
+#    memory: 128Mi
+#  requests:
+#    cpu: 100m
+#    memory: 128Mi
+
+# -- Node labels for pod assignment
+nodeSelector: {}
+
+# -- Tolerations for pod assignment
+tolerations: []
+
+# -- Affinity for pod assignment
+affinity: {}
+
+# -- Topology spread constraints for pod assignment
+# Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+topologySpreadConstraints: []
+#  - maxSkew: 1
+#    topologyKey: topology.kubernetes.io/zone
+#    whenUnsatisfiable: DoNotSchedule
+#    labelSelector:
+#      matchLabels:
+#        app.kubernetes.io/name: steampipe
+
+# -- Reference volumes
+# Use this to mount plugin connection configs (.spc files) into /home/steampipe/.steampipe/config/
+extraVolumes: []
+#  - name: aws-connection
+#    secret:
+#      secretName: aws-connection
+#  - name: azure-connection
+#    configMap:
+#      name: azure-connection
+
+# -- Mount extra volumes
+extraVolumeMount: []
+#  - name: aws-connection
+#    mountPath: "/home/steampipe/.steampipe/config/aws.spc"
+#    subPath: aws.spc
+#    readOnly: true
+#  - name: azure-connection
+#    mountPath: "/home/steampipe/.steampipe/config/azure.spc"
+#    subPath: azure.spc
+#    readOnly: true
+
+# -- Configure initContainers
+# The init container installs Steampipe plugins before the main container starts.
+# It uses the same image (repository + tag) as the main container to ensure CLI compatibility.
+initContainer:
+  image:
+    pullPolicy: IfNotPresent
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 9193
+
+  # -- Configure Steampipe plugins to install
+  # Ref: https://hub.steampipe.io/plugins
+  plugins: []
+  # - "aws"
+  # - "azure"
+  # - "kubernetes"
+  # - "terraform"
+
+  # -- The resources limits and requested
+  resources: {}
+  # limits:
+  #   cpu: "1500m"
+  #   memory: 2048Mi
+  # requests:
+  #   cpu: 1
+  #   memory: 256Mi
+
+  extraInitVolumeMount: []
+
+# -- Extra containers to add to the pod
+extraContainers: []
+
+# -- Extra Kubernetes manifests to deploy
+extraObjects: []
+# - apiVersion: batch/v1
+#   kind: CronJob
+#   metadata:
+#     name: hello
+#   spec:
+#     schedule: "* * * * *"
+#     jobTemplate:
+#       spec:
+#         template:
+#           spec:
+#             containers:
+#             - name: hello
+#               image: busybox:1.28
+#               imagePullPolicy: IfNotPresent
+#               command:
+#               - /bin/sh
+#               - -c
+#               - date; echo Hello from the Kubernetes cluster
+#             restartPolicy: OnFailure

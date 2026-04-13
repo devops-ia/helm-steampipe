@@ -1,0 +1,61 @@
+# Test: full-featured deployment with all options
+---
+replicaCount: 1
+
+initContainer:
+  plugins:
+    - aws
+    - gcp
+    - kubernetes
+
+bbdd:
+  enabled: true
+  port: 9193
+  listen: "network"
+  serviceType: ClusterIP
+
+env:
+  - name: STEAMPIPE_DATABASE_PASSWORD
+    value: "test-password-ci"
+  - name: STEAMPIPE_UPDATE_CHECK
+    value: "false"
+  - name: STEAMPIPE_TELEMETRY
+    value: "none"
+  - name: STEAMPIPE_CACHE
+    value: "true"
+  - name: STEAMPIPE_CACHE_TTL
+    value: "300"
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: steampipe.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 9193
+  tls:
+    - secretName: steampipe-tls
+      hosts:
+        - steampipe.example.com
+
+serviceAccount:
+  create: true
+  automountServiceAccountToken: true
+
+podAnnotations:
+  prometheus.io/scrape: "false"
+
+extraVolumeMount:
+  - name: k8s-connection
+    mountPath: /home/steampipe/.steampipe/config/kubernetes.spc
+    subPath: kubernetes.spc
+    readOnly: true
+
+extraVolumes:
+  - name: k8s-connection
+    configMap:
+      name: k8s-connection

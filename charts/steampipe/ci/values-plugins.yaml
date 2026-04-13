@@ -1,0 +1,20 @@
+# Test: plugins with database service enabled
+---
+replicaCount: 1
+
+initContainer:
+  plugins:
+    - aws
+    - kubernetes
+
+bbdd:
+  enabled: true
+  port: 9193
+  listen: "network"
+  serviceType: ClusterIP
+
+env:
+  - name: STEAMPIPE_UPDATE_CHECK
+    value: "false"
+  - name: STEAMPIPE_TELEMETRY
+    value: "none"
