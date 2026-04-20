@@ -1,0 +1,22 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Steampipe Helm Chart",
+  "description": "Helm chart for deploying Steampipe as a persistent PostgreSQL-compatible service (port 9193) on Kubernetes. Supports 140+ cloud provider plugins (AWS, GCP, Azure, Kubernetes, GitHub, etc.), automatic plugin installation via init containers, and workload identity integration for credential-free authentication.",
+  "folders": ["charts/steampipe", "docs"],
+  "excludeFolders": [".github", "node_modules", "charts/steampipe/tests", "charts/steampipe/__snapshot__"],
+  "excludeFiles": ["Chart.lock", "cli-snapshot.json", "artifacthub-repo.yml", ".helmignore", "package.json", "TESTING.md", "CODEOWNERS"],
+  "rules": [
+    "Always set bbdd.enabled: true to create the PostgreSQL service — without it no Service resource is created and the endpoint is unreachable",
+    "Always set bbdd.listen: network (not 'local') when you need connections from outside the pod",
+    "The PostgreSQL service is always named <release-name>-psql, not <release-name> — use this name for psql, Grafana, and other clients",
+    "Plugins are declared in initContainer.plugins[] as a list of plugin names (e.g. 'aws', 'gcp') — no version suffix unless pinning",
+    "The init container uses the SAME image as the main container (ghcr.io/devops-ia/steampipe) — do NOT specify a separate initContainer.image",
+    "Plugin .spc config files must be mounted into /home/steampipe/.steampipe/config/ — use extraVolumes and extraVolumeMount, NOT configMap.data directly on the deployment",
+    "Steampipe runs as UID 9193 / GID 0 — this is OpenShift-compatible; do NOT change runAsUser or runAsGroup unless absolutely necessary",
+    "Always set STEAMPIPE_DATABASE_PASSWORD via a Kubernetes Secret to avoid the random password changing on every pod restart",
+    "Set STEAMPIPE_UPDATE_CHECK=false and STEAMPIPE_TELEMETRY=none in production Kubernetes deployments",
+    "For workload identity (AWS IRSA, GCP Workload Identity, Azure WI), annotate the ServiceAccount — the plugins auto-detect credentials; no keys needed in .spc files",
+    "The image is ghcr.io/devops-ia/steampipe (NOT ghcr.io/turbot/steampipe — Turbot stopped publishing images after v0.22.0)",
+    "Plugins are stored in an emptyDir and reinstalled on every pod start by the init container — this is by design for version freshness"
+  ]
+}
