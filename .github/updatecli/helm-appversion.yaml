@@ -10,21 +10,19 @@ sources:
         pattern: ">=v2.0.0"
 conditions: {}
 targets:
+  imageTag:
+    name: bump steampipe image tag in values.yaml
+    kind: helmchart
+    spec:
+      name: charts/steampipe
+      file: values.yaml
+      key: $.image.tag
+    sourceid: steampipe
   appVersion:
-    name: bump appVersion
+    name: bump appVersion in Chart.yaml (informational reference)
     kind: helmchart
     spec:
       name: charts/steampipe
       file: Chart.yaml
       key: $.appVersion
     sourceid: steampipe
-  chartVersion:
-    name: bump chart version
-    kind: helmchart
-    spec:
-      name: charts/steampipe
-      file: Chart.yaml
-      key: $.version
-    sourceid: steampipe
-    transformers:
-      - trimprefix: "v"

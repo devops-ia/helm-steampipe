@@ -9,8 +9,9 @@ replicaCount: 1
 image:
   repository: ghcr.io/devops-ia/steampipe
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  # image.tag is managed by updatecli monitoring devops-ia/steampipe releases.
+  # Chart.yaml appVersion is kept as an informational reference only.
+  tag: "v2.4.1"
 
 # -- Registry secret names as an array
 imagePullSecrets: []
@@ -234,6 +235,156 @@ extraContainers: []
 
 # -- Extra Kubernetes manifests to deploy
 extraObjects: []
+
+# -- Powerpipe configuration (optional component)
+# Powerpipe provides dashboards and compliance benchmarks that connect to Steampipe as their database.
+# Requires Steampipe to be running with bbdd.enabled=true to accept connections.
+# Ref: https://powerpipe.io/docs
+powerpipe:
+  # -- Enable Powerpipe deployment
+  enabled: false
+
+  # -- Image registry
+  image:
+    repository: ghcr.io/devops-ia/powerpipe
+    pullPolicy: IfNotPresent
+    # Powerpipe version — updated only here (not in Chart.yaml which tracks Steampipe).
+    # updatecli monitors devops-ia/powerpipe releases and updates this tag automatically.
+    tag: "v1.5.1"
+
+  # -- Powerpipe database connection string (required)
+  # Must point to a running Steampipe PostgreSQL endpoint.
+  # Example: "postgresql://steampipe:<password>@<release-name>-steampipe-psql:9193/steampipe"
+  # If set, POWERPIPE_DATABASE is injected automatically as an env var.
+  # If empty, set it yourself via env/envFrom using a Kubernetes Secret.
+  database: ""
+
+  # -- Number of replicas
+  replicaCount: 1
+
+  # -- Pod annotations
+  podAnnotations: {}
+
+  # -- Pod labels
+  podLabels: {}
+
+  # -- Deployment annotations
+  deploymentAnnotations: {}
+
+  # -- Privilege and access control settings for the Powerpipe pod
+  # Powerpipe uses UID=9193, GID=0 (same as Steampipe, OpenShift compatible)
+  podSecurityContext:
+    fsGroup: 9193
+    runAsGroup: 0
+    runAsUser: 9193
+
+  # -- Privilege and access control settings for the Powerpipe container
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 9193
+
+  # -- Environment variables for the Powerpipe container
+  # Ref: https://powerpipe.io/docs/reference/env-vars/overview
+  env: []
+
+  # -- Variables from file
+  envFrom: []
+
+  # -- Configure liveness probe
+  livenessProbe: {}
+  #  httpGet:
+  #    path: /
+  #    port: dashboard
+  #  initialDelaySeconds: 30
+  #  periodSeconds: 10
+
+  # -- Configure readinessProbe
+  readinessProbe: {}
+  #  httpGet:
+  #    path: /
+  #    port: dashboard
+  #  initialDelaySeconds: 15
+  #  periodSeconds: 5
+
+  # -- Configure startupProbe
+  startupProbe: {}
+  #  httpGet:
+  #    path: /
+  #    port: dashboard
+  #  periodSeconds: 10
+  #  failureThreshold: 30
+
+  # -- Service configuration for the Powerpipe dashboard
+  # Powerpipe exposes an HTTP dashboard (not TCP/PostgreSQL), so standard Ingress works fine.
+  service:
+    type: ClusterIP
+    port: 9033
+    annotations: {}
+
+  # -- Ingress configuration for the Powerpipe dashboard
+  # Unlike Steampipe, Powerpipe exposes HTTP — a standard Kubernetes Ingress works here.
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    hosts:
+      - host: powerpipe.local
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
+    #  - secretName: powerpipe-tls
+    #    hosts:
+    #      - powerpipe.local
+
+  # -- The resources limits and requested
+  resources: {}
+
+  # -- Node labels for pod assignment
+  nodeSelector: {}
+
+  # -- Tolerations for pod assignment
+  tolerations: []
+
+  # -- Affinity for pod assignment
+  affinity: {}
+
+  # -- Topology spread constraints for pod assignment
+  topologySpreadConstraints: []
+
+  # -- Reference volumes
+  extraVolumes: []
+
+  # -- Mount extra volumes
+  extraVolumeMount: []
+
+  # -- Extra containers to add to the Powerpipe pod
+  extraContainers: []
+
+  # -- Configure initContainer for Powerpipe mods
+  # The init container installs Powerpipe mods before the main container starts.
+  # It uses the same image (repository + tag) as the main Powerpipe container.
+  # Ref: https://hub.steampipe.io/mods
+  initContainer:
+    image:
+      pullPolicy: IfNotPresent
+
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 9193
+
+    # -- Powerpipe mods to install
+    # Example: "github.com/turbot/steampipe-mod-aws-compliance"
+    mods: []
+    # - "github.com/turbot/steampipe-mod-aws-compliance"
+    # - "github.com/turbot/steampipe-mod-kubernetes-compliance"
+
+    # -- The resources limits and requested
+    resources: {}
+
+    extraInitVolumeMount: []
 # - apiVersion: batch/v1
 #   kind: CronJob
 #   metadata:

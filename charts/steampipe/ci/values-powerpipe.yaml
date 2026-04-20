@@ -1,0 +1,10 @@
+# -- CI values: Powerpipe enabled with mods
+powerpipe:
+  enabled: true
+  database: "postgresql://steampipe:test@release-name-steampipe-psql:9193/steampipe"
+  initContainer:
+    mods:
+      - "github.com/turbot/steampipe-mod-kubernetes-compliance"
+
+bbdd:
+  enabled: true

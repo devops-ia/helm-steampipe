@@ -1,0 +1,35 @@
+{{- if and .Values.powerpipe.enabled .Values.powerpipe.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "steampipe.powerpipe.fullname" . }}
+  labels:
+    {{- include "steampipe.powerpipe.labels" . | nindent 4 }}
+  {{- with .Values.powerpipe.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.powerpipe.ingress.className }}
+  ingressClassName: {{ .Values.powerpipe.ingress.className }}
+  {{- end }}
+  {{- if .Values.powerpipe.ingress.tls }}
+  tls:
+    {{- toYaml .Values.powerpipe.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.powerpipe.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "steampipe.powerpipe.fullname" $ }}
+                port:
+                  number: {{ $.Values.powerpipe.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

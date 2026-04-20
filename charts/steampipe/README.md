@@ -247,6 +247,57 @@ Steampipe exposes a standard PostgreSQL interface. Point any Postgres datasource
 | Password | value of `STEAMPIPE_DATABASE_PASSWORD`        |
 | SSL Mode | `disable` (within cluster)                    |
 
+### 7 — Steampipe + Powerpipe full stack
+
+Deploy both Steampipe (data backend) and Powerpipe (dashboard) in a single Helm release:
+
+```yaml
+# Steampipe — expose PostgreSQL endpoint
+bbdd:
+  enabled: true
+  serviceType: ClusterIP
+
+env:
+  - name: STEAMPIPE_DATABASE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: steampipe-password
+        key: password
+
+initContainer:
+  plugins:
+    - aws
+
+extraVolumes:
+  - name: aws-credentials
+    secret:
+      secretName: aws-credentials
+extraVolumeMount:
+  - name: aws-credentials
+    mountPath: /home/steampipe/.steampipe/config/aws.spc
+    subPath: aws.spc
+    readOnly: true
+
+# Powerpipe — dashboard on port 9033
+powerpipe:
+  enabled: true
+  # Connection string to Steampipe (use release name + -psql suffix)
+  database: "postgresql://steampipe:your-stable-password@my-release-steampipe-psql:9193/steampipe"
+  initContainer:
+    mods:
+      - "github.com/turbot/steampipe-mod-aws-compliance"
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: powerpipe.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+```
+
+Access the Powerpipe dashboard at `http://powerpipe.example.com` once the mods are installed.
+
 ---
 
 ## Environment Variables Reference
@@ -446,7 +497,7 @@ env:
 
 | Change | Migration action |
 |--------|-----------------|
-| `powerpipe.*` removed | Powerpipe is now a separate Helm chart. Remove `powerpipe.*` from values. |
+| `powerpipe.*` removed in v4.0.0, re-added in v4.1.0+ | If upgrading from v3.x to v4.0.0, remove `powerpipe.*`. From v4.1.0+ you can use `powerpipe.enabled: true`. |
 | `oauth2Proxy.*` / `oauth2-proxy` sub-chart removed | Manage authentication externally. Remove `oauth2Proxy.*` from values. |
 | `extraConfig.*` removed | Use `extraVolumes` + `extraVolumeMount` with standard Kubernetes Secrets/ConfigMaps instead. |
 | `dashboard.*` removed | Already removed in v2. If still present, remove. |
@@ -550,6 +601,34 @@ helm show values steampipe/steampipe
 | podAnnotations | object | `{}` | Pod annotations |
 | podLabels | object | `{}` | Pod labels |
 | podSecurityContext | object | `{"fsGroup":9193,"runAsGroup":0,"runAsUser":9193}` | Privilege and access control settings for a Pod or Container Steampipe runs as UID=9193, GID=0 (root group for OpenShift compatibility) |
+| powerpipe | object | `{"affinity":{},"database":"","deploymentAnnotations":{},"enabled":false,"env":[],"envFrom":[],"extraContainers":[],"extraVolumeMount":[],"extraVolumes":[],"image":{"pullPolicy":"IfNotPresent","repository":"ghcr.io/devops-ia/powerpipe","tag":"v1.5.1"},"ingress":{"annotations":{},"className":"","enabled":false,"hosts":[{"host":"powerpipe.local","paths":[{"path":"/","pathType":"ImplementationSpecific"}]}],"tls":[]},"initContainer":{"extraInitVolumeMount":[],"image":{"pullPolicy":"IfNotPresent"},"mods":[],"resources":{},"securityContext":{"runAsNonRoot":true,"runAsUser":9193}},"livenessProbe":{},"nodeSelector":{},"podAnnotations":{},"podLabels":{},"podSecurityContext":{"fsGroup":9193,"runAsGroup":0,"runAsUser":9193},"readinessProbe":{},"replicaCount":1,"resources":{},"securityContext":{"runAsNonRoot":true,"runAsUser":9193},"service":{"annotations":{},"port":9033,"type":"ClusterIP"},"startupProbe":{},"tolerations":[],"topologySpreadConstraints":[]}` | Powerpipe configuration (optional component) Powerpipe provides dashboards and compliance benchmarks that connect to Steampipe as their database. Requires Steampipe to be running with bbdd.enabled=true to accept connections. Ref: https://powerpipe.io/docs |
+| powerpipe.affinity | object | `{}` | Affinity for pod assignment |
+| powerpipe.database | string | `""` | Powerpipe database connection string (required) Must point to a running Steampipe PostgreSQL endpoint. Example: "postgresql://steampipe:<password>@<release-name>-steampipe-psql:9193/steampipe" If set, POWERPIPE_DATABASE is injected automatically as an env var. If empty, set it yourself via env/envFrom using a Kubernetes Secret. |
+| powerpipe.deploymentAnnotations | object | `{}` | Deployment annotations |
+| powerpipe.enabled | bool | `false` | Enable Powerpipe deployment |
+| powerpipe.env | list | `[]` | Environment variables for the Powerpipe container Ref: https://powerpipe.io/docs/reference/env-vars/overview |
+| powerpipe.envFrom | list | `[]` | Variables from file |
+| powerpipe.extraContainers | list | `[]` | Extra containers to add to the Powerpipe pod |
+| powerpipe.extraVolumeMount | list | `[]` | Mount extra volumes |
+| powerpipe.extraVolumes | list | `[]` | Reference volumes |
+| powerpipe.image | object | `{"pullPolicy":"IfNotPresent","repository":"ghcr.io/devops-ia/powerpipe","tag":"v1.5.1"}` | Image registry |
+| powerpipe.ingress | object | `{"annotations":{},"className":"","enabled":false,"hosts":[{"host":"powerpipe.local","paths":[{"path":"/","pathType":"ImplementationSpecific"}]}],"tls":[]}` | Ingress configuration for the Powerpipe dashboard Unlike Steampipe, Powerpipe exposes HTTP — a standard Kubernetes Ingress works here. |
+| powerpipe.initContainer | object | `{"extraInitVolumeMount":[],"image":{"pullPolicy":"IfNotPresent"},"mods":[],"resources":{},"securityContext":{"runAsNonRoot":true,"runAsUser":9193}}` | Configure initContainer for Powerpipe mods The init container installs Powerpipe mods before the main container starts. It uses the same image (repository + tag) as the main Powerpipe container. Ref: https://hub.steampipe.io/mods |
+| powerpipe.initContainer.mods | list | `[]` | Powerpipe mods to install Example: "github.com/turbot/steampipe-mod-aws-compliance" |
+| powerpipe.initContainer.resources | object | `{}` | The resources limits and requested |
+| powerpipe.livenessProbe | object | `{}` | Configure liveness probe |
+| powerpipe.nodeSelector | object | `{}` | Node labels for pod assignment |
+| powerpipe.podAnnotations | object | `{}` | Pod annotations |
+| powerpipe.podLabels | object | `{}` | Pod labels |
+| powerpipe.podSecurityContext | object | `{"fsGroup":9193,"runAsGroup":0,"runAsUser":9193}` | Privilege and access control settings for the Powerpipe pod Powerpipe uses UID=9193, GID=0 (same as Steampipe, OpenShift compatible) |
+| powerpipe.readinessProbe | object | `{}` | Configure readinessProbe |
+| powerpipe.replicaCount | int | `1` | Number of replicas |
+| powerpipe.resources | object | `{}` | The resources limits and requested |
+| powerpipe.securityContext | object | `{"runAsNonRoot":true,"runAsUser":9193}` | Privilege and access control settings for the Powerpipe container |
+| powerpipe.service | object | `{"annotations":{},"port":9033,"type":"ClusterIP"}` | Service configuration for the Powerpipe dashboard Powerpipe exposes an HTTP dashboard (not TCP/PostgreSQL), so standard Ingress works fine. |
+| powerpipe.startupProbe | object | `{}` | Configure startupProbe |
+| powerpipe.tolerations | list | `[]` | Tolerations for pod assignment |
+| powerpipe.topologySpreadConstraints | list | `[]` | Topology spread constraints for pod assignment |
 | readinessProbe | object | `{}` | Configure readinessProbe Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/ |
 | replicaCount | int | `1` | Number of replicas |
 | resources | object | `{}` | The resources limits and requested |

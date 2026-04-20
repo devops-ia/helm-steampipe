@@ -14,7 +14,7 @@
       "description": "Container image configuration for the Steampipe main container.",
       "properties": {
         "repository": { "type": "string", "minLength": 1, "description": "Container image registry and repository (default: ghcr.io/devops-ia/steampipe)." },
-        "tag":        { "type": "string", "description": "Image tag. Defaults to Chart.appVersion if empty." },
+        "tag":        { "type": "string", "description": "Steampipe image tag. Managed by updatecli monitoring devops-ia/steampipe releases (updates values.yaml only, not Chart.yaml version)." },
         "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"], "description": "Image pull policy." }
       },
       "required": ["repository"]
@@ -100,6 +100,89 @@
         "resources":           { "type": "object", "description": "CPU/memory resource requests and limits for the init container." },
         "plugins":             { "type": "array",  "description": "List of Steampipe plugins to install (e.g., ['aws', 'gcp', 'kubernetes'])." },
         "extraInitVolumeMount": { "type": "array", "description": "Additional volume mounts for the init container." }
+      }
+    },
+    "powerpipe": {
+      "type": "object",
+      "description": "Optional Powerpipe component. Deploys Powerpipe dashboards alongside Steampipe. Requires Steampipe running with bbdd.enabled=true.",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Deploy Powerpipe alongside Steampipe." },
+        "image": {
+          "type": "object",
+          "description": "Powerpipe container image. Tag is managed independently of Chart.appVersion (updatecli updates values.yaml only).",
+          "properties": {
+            "repository": { "type": "string", "minLength": 1, "description": "Container image registry and repository (default: ghcr.io/devops-ia/powerpipe)." },
+            "tag":        { "type": "string", "description": "Powerpipe image tag. Managed by updatecli monitoring devops-ia/powerpipe releases." },
+            "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"], "description": "Image pull policy." }
+          },
+          "required": ["repository"]
+        },
+        "database":              { "type": "string", "description": "Steampipe connection string injected as POWERPIPE_DATABASE. Example: postgresql://steampipe:<pwd>@<svc>:9193/steampipe." },
+        "replicaCount":          { "type": "integer", "minimum": 1, "description": "Number of Powerpipe pod replicas." },
+        "podAnnotations":        { "type": "object", "description": "Annotations added to each Powerpipe pod." },
+        "podLabels":             { "type": "object", "description": "Labels added to each Powerpipe pod." },
+        "deploymentAnnotations": { "type": "object", "description": "Annotations added to the Powerpipe Deployment resource." },
+        "podSecurityContext":    { "type": "object", "description": "Pod-level security context. Defaults: fsGroup=9193, runAsUser=9193, runAsGroup=0." },
+        "securityContext":       { "type": "object", "description": "Container-level security context. Defaults: runAsNonRoot=true, runAsUser=9193." },
+        "env":                   { "type": "array",  "description": "Environment variables for the Powerpipe container." },
+        "envFrom":               { "type": "array",  "description": "Environment variable sources (ConfigMap/Secret references)." },
+        "livenessProbe":         { "type": "object", "description": "Custom liveness probe. Defaults to httpGet / on dashboard port." },
+        "readinessProbe":        { "type": "object", "description": "Custom readiness probe. Defaults to httpGet / on dashboard port." },
+        "startupProbe":          { "type": "object", "description": "Custom startup probe. Defaults to httpGet / on dashboard port." },
+        "service": {
+          "type": "object",
+          "description": "Powerpipe HTTP dashboard service (port 9033).",
+          "properties": {
+            "type":        { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"], "description": "Kubernetes Service type." },
+            "port":        { "type": "integer", "minimum": 1, "maximum": 65535, "description": "Powerpipe dashboard port. Default: 9033." },
+            "annotations": { "type": "object", "description": "Annotations added to the Service." }
+          }
+        },
+        "ingress": {
+          "type": "object",
+          "description": "HTTP Ingress for the Powerpipe dashboard. Unlike Steampipe, Powerpipe exposes HTTP so standard Ingress works.",
+          "properties": {
+            "enabled":     { "type": "boolean", "description": "Create an Ingress resource for Powerpipe." },
+            "className":   { "type": "string", "description": "Ingress class name." },
+            "annotations": { "type": "object", "description": "Ingress annotations." },
+            "hosts": {
+              "type": "array",
+              "description": "Ingress host rules.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "host":  { "type": "string" },
+                  "paths": { "type": "array" }
+                }
+              }
+            },
+            "tls": { "type": "array", "description": "TLS configuration for the Ingress." }
+          }
+        },
+        "resources":               { "type": "object", "description": "CPU/memory resource requests and limits for the Powerpipe container." },
+        "nodeSelector":            { "type": "object", "description": "Node label selector for Powerpipe pod scheduling." },
+        "tolerations":             { "type": "array",  "description": "Tolerations for Powerpipe pod scheduling." },
+        "affinity":                { "type": "object", "description": "Affinity rules for Powerpipe pod scheduling." },
+        "topologySpreadConstraints": { "type": "array", "description": "Topology spread constraints for Powerpipe pod scheduling." },
+        "extraVolumes":            { "type": "array",  "description": "Additional volumes for the Powerpipe pod." },
+        "extraVolumeMount":        { "type": "array",  "description": "Additional volume mounts for the Powerpipe container." },
+        "extraContainers":         { "type": "array",  "description": "Additional sidecar containers for the Powerpipe pod." },
+        "initContainer": {
+          "type": "object",
+          "description": "Init container that installs Powerpipe mods before the main container starts. Uses the same Powerpipe image.",
+          "properties": {
+            "image": {
+              "type": "object",
+              "properties": {
+                "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"], "description": "Pull policy for the Powerpipe init container." }
+              }
+            },
+            "securityContext":      { "type": "object", "description": "Security context for the Powerpipe init container." },
+            "resources":            { "type": "object", "description": "CPU/memory resource requests and limits for the Powerpipe init container." },
+            "mods":                 { "type": "array",  "description": "List of Powerpipe mods to install (e.g., ['github.com/turbot/steampipe-mod-aws-compliance'])." },
+            "extraInitVolumeMount": { "type": "array",  "description": "Additional volume mounts for the Powerpipe init container." }
+          }
+        }
       }
     }
   }

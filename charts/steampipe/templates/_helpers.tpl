@@ -61,3 +61,30 @@ Create the name of the service account to use
 {{- end }}
 {{- end }}
 
+{{/*
+Fully qualified name for Powerpipe resources.
+*/}}
+{{- define "steampipe.powerpipe.fullname" -}}
+{{- printf "%s-powerpipe" (include "steampipe.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Selector labels for Powerpipe resources.
+*/}}
+{{- define "steampipe.powerpipe.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "steampipe.name" . }}-powerpipe
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Labels for Powerpipe resources (includes chart + version metadata).
+*/}}
+{{- define "steampipe.powerpipe.labels" -}}
+helm.sh/chart: {{ include "steampipe.chart" . }}
+{{ include "steampipe.powerpipe.selectorLabels" . }}
+{{- if .Values.powerpipe.image.tag }}
+app.kubernetes.io/version: {{ .Values.powerpipe.image.tag | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+

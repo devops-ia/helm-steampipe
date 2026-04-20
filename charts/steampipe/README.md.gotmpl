@@ -244,6 +244,57 @@ Steampipe exposes a standard PostgreSQL interface. Point any Postgres datasource
 | Password | value of `STEAMPIPE_DATABASE_PASSWORD`        |
 | SSL Mode | `disable` (within cluster)                    |
 
+### 7 — Steampipe + Powerpipe full stack
+
+Deploy both Steampipe (data backend) and Powerpipe (dashboard) in a single Helm release:
+
+```yaml
+# Steampipe — expose PostgreSQL endpoint
+bbdd:
+  enabled: true
+  serviceType: ClusterIP
+
+env:
+  - name: STEAMPIPE_DATABASE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: steampipe-password
+        key: password
+
+initContainer:
+  plugins:
+    - aws
+
+extraVolumes:
+  - name: aws-credentials
+    secret:
+      secretName: aws-credentials
+extraVolumeMount:
+  - name: aws-credentials
+    mountPath: /home/steampipe/.steampipe/config/aws.spc
+    subPath: aws.spc
+    readOnly: true
+
+# Powerpipe — dashboard on port 9033
+powerpipe:
+  enabled: true
+  # Connection string to Steampipe (use release name + -psql suffix)
+  database: "postgresql://steampipe:your-stable-password@my-release-steampipe-psql:9193/steampipe"
+  initContainer:
+    mods:
+      - "github.com/turbot/steampipe-mod-aws-compliance"
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: powerpipe.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+```
+
+Access the Powerpipe dashboard at `http://powerpipe.example.com` once the mods are installed.
+
 ---
 
 ## Environment Variables Reference
@@ -443,7 +494,7 @@ env:
 
 | Change | Migration action |
 |--------|-----------------|
-| `powerpipe.*` removed | Powerpipe is now a separate Helm chart. Remove `powerpipe.*` from values. |
+| `powerpipe.*` removed in v4.0.0, re-added in v4.1.0+ | If upgrading from v3.x to v4.0.0, remove `powerpipe.*`. From v4.1.0+ you can use `powerpipe.enabled: true`. |
 | `oauth2Proxy.*` / `oauth2-proxy` sub-chart removed | Manage authentication externally. Remove `oauth2Proxy.*` from values. |
 | `extraConfig.*` removed | Use `extraVolumes` + `extraVolumeMount` with standard Kubernetes Secrets/ConfigMaps instead. |
 | `dashboard.*` removed | Already removed in v2. If still present, remove. |

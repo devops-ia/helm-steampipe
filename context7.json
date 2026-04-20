@@ -2,8 +2,8 @@
   "$schema": "https://context7.com/schema/context7.json",
   "url": "https://context7.com/devops-ia/steampipe",
   "public_key": "pk_poNqP0E20Jn62M589pdY6",
-  "projectTitle": "Steampipe Helm Chart",
-  "description": "Helm chart for deploying Steampipe as a persistent PostgreSQL-compatible service (port 9193) on Kubernetes. Supports 140+ cloud provider plugins (AWS, GCP, Azure, Kubernetes, GitHub, etc.), automatic plugin installation via init containers, and workload identity integration for credential-free authentication.",
+  "projectTitle": "Steampipe + Powerpipe Helm Chart",
+  "description": "Helm chart for deploying Steampipe (PostgreSQL-compatible cloud query API, port 9193) and optionally Powerpipe (compliance dashboards and benchmarks, port 9033) on Kubernetes. Supports 140+ cloud provider plugins (AWS, GCP, Azure, Kubernetes, GitHub, etc.), automatic plugin and mod installation via init containers, workload identity integration, and a full-stack mode where both services run in a single Helm release.",
   "folders": ["charts/steampipe", "docs"],
   "excludeFolders": [".github", "node_modules", "charts/steampipe/tests", "charts/steampipe/__snapshot__"],
   "excludeFiles": ["Chart.lock", "cli-snapshot.json", "artifacthub-repo.yml", ".helmignore", "package.json", "TESTING.md", "CODEOWNERS"],
@@ -18,7 +18,13 @@
     "Always set STEAMPIPE_DATABASE_PASSWORD via a Kubernetes Secret to avoid the random password changing on every pod restart",
     "Set STEAMPIPE_UPDATE_CHECK=false and STEAMPIPE_TELEMETRY=none in production Kubernetes deployments",
     "For workload identity (AWS IRSA, GCP Workload Identity, Azure WI), annotate the ServiceAccount — the plugins auto-detect credentials; no keys needed in .spc files",
-    "The image is ghcr.io/devops-ia/steampipe (NOT ghcr.io/turbot/steampipe — Turbot stopped publishing images after v0.22.0)",
-    "Plugins are stored in an emptyDir and reinstalled on every pod start by the init container — this is by design for version freshness"
+    "The Steampipe image is ghcr.io/devops-ia/steampipe (NOT ghcr.io/turbot/steampipe — Turbot stopped publishing images after v0.22.0)",
+    "Plugins are stored in an emptyDir and reinstalled on every pod start by the init container — this is by design for version freshness",
+    "To enable Powerpipe dashboards alongside Steampipe, set powerpipe.enabled: true — Powerpipe requires Steampipe as its database backend",
+    "Always set powerpipe.database to the Steampipe connection string (postgresql://steampipe:<password>@<release>-psql:9193/steampipe) — Powerpipe cannot start without POWERPIPE_DATABASE",
+    "Powerpipe serves HTTP dashboards on port 9033 — a standard Kubernetes HTTP Ingress works here (unlike Steampipe's TCP-only port 9193)",
+    "Powerpipe mods are declared in powerpipe.initContainer.mods[] as full Go module URLs (e.g. 'github.com/turbot/steampipe-mod-aws-compliance')",
+    "The Powerpipe image tag (powerpipe.image.tag) is managed independently of Chart.appVersion — updatecli updates only values.yaml for Powerpipe releases",
+    "The Powerpipe service is named <release-name>-powerpipe — use this name when configuring ingress backends or port-forwarding"
   ]
 }

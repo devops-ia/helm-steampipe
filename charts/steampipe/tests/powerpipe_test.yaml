@@ -1,0 +1,160 @@
+suite: powerpipe tests
+templates:
+  - templates/powerpipe-deployment.yaml
+  - templates/powerpipe-service.yaml
+  - templates/powerpipe-configmap-mods.yaml
+  - templates/powerpipe-ingress.yaml
+
+tests:
+  - it: should not render any resource when powerpipe is disabled (default)
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render Deployment and Service when powerpipe.enabled is true
+    set:
+      powerpipe.enabled: true
+    templates:
+      - templates/powerpipe-deployment.yaml
+      - templates/powerpipe-service.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: should render a Deployment with correct image when powerpipe.enabled is true
+    set:
+      powerpipe.enabled: true
+      powerpipe.image.tag: "v1.5.1"
+    templates:
+      - templates/powerpipe-deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "ghcr.io/devops-ia/powerpipe:v1.5.1"
+
+  - it: should inject POWERPIPE_DATABASE env var when powerpipe.database is set
+    set:
+      powerpipe.enabled: true
+      powerpipe.database: "postgresql://steampipe:pass@host:9193/steampipe"
+    templates:
+      - templates/powerpipe-deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POWERPIPE_DATABASE
+            value: "postgresql://steampipe:pass@host:9193/steampipe"
+
+  - it: should NOT inject POWERPIPE_DATABASE env var when powerpipe.database is empty
+    set:
+      powerpipe.enabled: true
+      powerpipe.database: ""
+    templates:
+      - templates/powerpipe-deployment.yaml
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].env
+
+  - it: should not render init container when powerpipe.initContainer.mods is empty
+    set:
+      powerpipe.enabled: true
+    templates:
+      - templates/powerpipe-deployment.yaml
+    asserts:
+      - isNull:
+          path: spec.template.spec.initContainers
+
+  - it: should render init container when powerpipe.initContainer.mods is set
+    set:
+      powerpipe.enabled: true
+      powerpipe.initContainer.mods:
+        - "github.com/turbot/steampipe-mod-aws-compliance"
+    templates:
+      - templates/powerpipe-deployment.yaml
+    asserts:
+      - isNotNull:
+          path: spec.template.spec.initContainers
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: init
+
+  - it: should render ConfigMap when mods are set
+    set:
+      powerpipe.enabled: true
+      powerpipe.initContainer.mods:
+        - "github.com/turbot/steampipe-mod-aws-compliance"
+    templates:
+      - templates/powerpipe-configmap-mods.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: kind
+          value: ConfigMap
+
+  - it: should not render ConfigMap when mods is empty
+    set:
+      powerpipe.enabled: true
+    templates:
+      - templates/powerpipe-configmap-mods.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render Service with correct port
+    set:
+      powerpipe.enabled: true
+    templates:
+      - templates/powerpipe-service.yaml
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 9033
+
+  - it: should render Service with LoadBalancer type when configured
+    set:
+      powerpipe.enabled: true
+      powerpipe.service.type: LoadBalancer
+    templates:
+      - templates/powerpipe-service.yaml
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+
+  - it: should not render Ingress when ingress is disabled (default)
+    set:
+      powerpipe.enabled: true
+    templates:
+      - templates/powerpipe-ingress.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render Ingress when powerpipe.ingress.enabled is true
+    set:
+      powerpipe.enabled: true
+      powerpipe.ingress.enabled: true
+      powerpipe.ingress.hosts:
+        - host: powerpipe.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+    templates:
+      - templates/powerpipe-ingress.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.rules[0].host
+          value: powerpipe.example.com
+
+  - it: should use powerpipe fullname for resource names
+    set:
+      powerpipe.enabled: true
+    templates:
+      - templates/powerpipe-deployment.yaml
+    asserts:
+      - matchRegex:
+          path: metadata.name
+          pattern: .*-powerpipe$
