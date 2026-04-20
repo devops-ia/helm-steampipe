@@ -1,0 +1,163 @@
+{{- if .Values.powerpipe.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "steampipe.powerpipe.fullname" . }}
+  labels:
+    {{- include "steampipe.powerpipe.labels" . | nindent 4 }}
+  {{- with .Values.powerpipe.deploymentAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.powerpipe.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "steampipe.powerpipe.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.powerpipe.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "steampipe.powerpipe.selectorLabels" . | nindent 8 }}
+        {{- with .Values.powerpipe.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.powerpipe.initContainer.mods }}
+      initContainers:
+        - name: init
+          image: "{{ .Values.powerpipe.image.repository }}:{{ .Values.powerpipe.image.tag }}"
+          imagePullPolicy: {{ .Values.powerpipe.initContainer.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.powerpipe.initContainer.securityContext | nindent 12 }}
+          command: [ "sh", "/var/powerpipe_scripts/init.sh" ]
+          resources:
+            {{- toYaml .Values.powerpipe.initContainer.resources | nindent 12 }}
+          volumeMounts:
+            - name: scripts
+              mountPath: /var/powerpipe_scripts
+            - name: workspace
+              mountPath: /workspace
+          {{- with .Values.powerpipe.initContainer.extraInitVolumeMount }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- end }}
+      containers:
+        - name: powerpipe
+          securityContext:
+            {{- toYaml .Values.powerpipe.securityContext | nindent 12 }}
+          image: "{{ .Values.powerpipe.image.repository }}:{{ .Values.powerpipe.image.tag }}"
+          imagePullPolicy: {{ .Values.powerpipe.image.pullPolicy }}
+          args:
+            - "powerpipe"
+            - "server"
+            - "--listen"
+            - "network"
+          {{- $envVars := list }}
+          {{- if .Values.powerpipe.database }}
+          {{- $envVars = append $envVars (dict "name" "POWERPIPE_DATABASE" "value" .Values.powerpipe.database) }}
+          {{- end }}
+          {{- if .Values.powerpipe.env }}
+          {{- $envVars = concat $envVars .Values.powerpipe.env }}
+          {{- end }}
+          {{- if $envVars }}
+          env:
+            {{- toYaml $envVars | nindent 12 }}
+          {{- end }}
+          {{- if .Values.powerpipe.envFrom }}
+          envFrom:
+            {{- toYaml .Values.powerpipe.envFrom | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: dashboard
+              containerPort: {{ .Values.powerpipe.service.port }}
+              protocol: TCP
+          {{- if .Values.powerpipe.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.powerpipe.livenessProbe | nindent 12 }}
+          {{- else }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: dashboard
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          {{- end }}
+          {{- if .Values.powerpipe.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.powerpipe.readinessProbe | nindent 12 }}
+          {{- else }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: dashboard
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          {{- end }}
+          {{- if .Values.powerpipe.startupProbe }}
+          startupProbe:
+            {{- toYaml .Values.powerpipe.startupProbe | nindent 12 }}
+          {{- else }}
+          startupProbe:
+            httpGet:
+              path: /
+              port: dashboard
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          {{- end }}
+          resources:
+            {{- toYaml .Values.powerpipe.resources | nindent 12 }}
+          volumeMounts:
+          {{- if .Values.powerpipe.initContainer.mods }}
+            - name: workspace
+              mountPath: /workspace
+          {{- end }}
+          {{- with .Values.powerpipe.extraVolumeMount }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.powerpipe.extraContainers }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "steampipe.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.powerpipe.podSecurityContext | nindent 8 }}
+      {{- with .Values.powerpipe.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.powerpipe.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.powerpipe.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.powerpipe.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+      {{- if .Values.powerpipe.initContainer.mods }}
+        - name: scripts
+          configMap:
+            name: {{ include "steampipe.powerpipe.fullname" . }}-scripts
+        - name: workspace
+          emptyDir: {}
+      {{- end }}
+      {{- with .Values.powerpipe.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

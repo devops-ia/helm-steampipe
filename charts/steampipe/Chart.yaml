@@ -1,12 +1,13 @@
 apiVersion: v2
 name: steampipe
-description: A Helm chart for Kubernetes to deploy Steampipe
+description: A Helm chart for Kubernetes to deploy Steampipe and optionally Powerpipe
 type: application
 version: 2.4.1
 appVersion: v2.4.1
 home: https://github.com/devops-ia/helm-steampipe
 sources:
   - https://github.com/devops-ia/steampipe
+  - https://github.com/devops-ia/powerpipe
   - https://github.com/devops-ia/helm-steampipe
 maintainers:
   - name: amartingarcia
@@ -15,6 +16,9 @@ maintainers:
     email: hello@ialejandro.rocks
 keywords:
   - steampipe
+  - powerpipe
   - sql
   - cloud
   - devops
+  - dashboards
+  - compliance

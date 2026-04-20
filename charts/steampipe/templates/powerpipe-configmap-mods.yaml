@@ -1,0 +1,17 @@
+{{- if and .Values.powerpipe.enabled .Values.powerpipe.initContainer.mods }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "steampipe.powerpipe.fullname" . }}-scripts
+  labels:
+    {{- include "steampipe.powerpipe.labels" . | nindent 4 }}
+data:
+  init.sh: |-
+    set -e
+{{- with .Values.powerpipe.initContainer.mods }}
+    echo "Powerpipe - Install Mods"
+    {{- range $key, $value := . }}
+    powerpipe mod install {{ $value }}
+    {{- end }}
+{{- end }}
+{{- end }}

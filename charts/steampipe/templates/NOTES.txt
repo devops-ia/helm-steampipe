@@ -36,3 +36,33 @@ The Steampipe endpoint is exposed at:
 {{- end }}
 
 {{- end }}
+
+{{- if .Values.powerpipe.enabled }}
+
+─────────────────────────────────────────
+Powerpipe dashboard is also deployed.
+
+{{- if .Values.powerpipe.ingress.enabled }}
+
+Access the dashboard at:
+{{- range $host := .Values.powerpipe.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.powerpipe.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+
+{{- else }}
+
+Access the dashboard via port-forward:
+   kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "steampipe.powerpipe.fullname" . }} 9033:9033
+   open http://localhost:9033
+
+{{- end }}
+
+{{- if not .Values.powerpipe.database }}
+⚠  POWERPIPE_DATABASE is not set. Powerpipe will not be able to query data.
+   Set powerpipe.database to your Steampipe connection string, for example:
+   postgresql://steampipe:<password>@{{ include "steampipe.fullname" . }}-psql:9193/steampipe
+{{- end }}
+
+{{- end }}

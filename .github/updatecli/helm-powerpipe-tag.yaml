@@ -1,0 +1,22 @@
+sources:
+  powerpipe:
+    kind: githubrelease
+    spec:
+      owner: "devops-ia"
+      repository: "powerpipe"
+      token: {{ requiredEnv "GITHUB_TOKEN" }}
+      versionFilter:
+        kind: semver
+        pattern: ">=v1.0.0"
+conditions: {}
+targets:
+  powerpipeTag:
+    name: bump powerpipe image tag in values.yaml
+    kind: helmchart
+    spec:
+      name: charts/steampipe
+      file: values.yaml
+      key: $.powerpipe.image.tag
+    sourceid: powerpipe
+    transformers:
+      - addprefix: "v"

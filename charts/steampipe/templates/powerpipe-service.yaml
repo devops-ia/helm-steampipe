@@ -1,0 +1,21 @@
+{{- if .Values.powerpipe.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "steampipe.powerpipe.fullname" . }}
+  labels:
+    {{- include "steampipe.powerpipe.labels" . | nindent 4 }}
+  {{- with .Values.powerpipe.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.powerpipe.service.type }}
+  ports:
+    - port: {{ .Values.powerpipe.service.port }}
+      targetPort: dashboard
+      protocol: TCP
+      name: dashboard
+  selector:
+    {{- include "steampipe.powerpipe.selectorLabels" . | nindent 4 }}
+{{- end }}
