@@ -15,8 +15,17 @@ helm install steampipe charts/steampipe/ --dry-run --debug
 # Dry-run a specific CI values file (there are 5 in charts/steampipe/ci/)
 helm install steampipe charts/steampipe/ --dry-run --debug -f charts/steampipe/ci/values-bbdd.yaml
 
-# Run helm-unittest tests
+# Run all helm-unittest tests
 helm unittest charts/steampipe/
+
+# Run a single test file
+helm unittest charts/steampipe/ -f tests/bbdd_test.yaml
+
+# Run tests matching a name pattern
+helm unittest charts/steampipe/ -t "should create a service when bbdd.enabled is true"
+
+# Update snapshots after intentional template changes
+helm unittest --update-snapshot charts/steampipe/
 
 # Regenerate charts/steampipe/README.md from the .gotmpl template
 helm-docs --chart-search-root=charts/steampipe
@@ -25,7 +34,7 @@ helm-docs --chart-search-root=charts/steampipe
 pre-commit run --all-files
 ```
 
-Unit tests live in `charts/steampipe/tests/*_test.yaml`. Run `helm unittest charts/steampipe/` to execute them. Validation is also done via `helm lint`, `ct lint`, and dry-run installs against the CI values files.
+Unit tests live in `charts/steampipe/tests/*_test.yaml`. Snapshots are stored in `charts/steampipe/tests/__snapshot__/` — commit them alongside template changes.
 
 ## Architecture
 
@@ -53,4 +62,30 @@ This is a **single Helm chart** (`charts/steampipe/`) that deploys Steampipe as 
 - **Template naming**: Steampipe resources use `steampipe.fullname`. The PostgreSQL service always appends `-psql`.
 - **Plugin configs** (`.spc` files) are mounted from Secrets or ConfigMaps into `/home/steampipe/.steampipe/config/` via `extraVolumes`/`extraVolumeMount`.
 - **CLI drift detection**: A workflow (`.github/workflows/helm-snapshot-check.yml`) posts a PR comment comparing `cli-snapshot.json` from `devops-ia/steampipe` at the old and new appVersions when `Chart.yaml` changes on a PR.
+- **Ingress is TCP-only**: Steampipe exposes PostgreSQL (port 9193), not HTTP. Standard Kubernetes Ingress won't work. Use NGINX TCP services ConfigMap, Traefik `IngressRouteTCP`, or simply rely on `bbdd.serviceType: LoadBalancer`. Don't create an HTTP Ingress expecting it to proxy PostgreSQL.
+- **`extraObjects`**: Use `extraObjects[]` to deploy arbitrary Kubernetes manifests (CronJobs, NetworkPolicies, etc.) alongside the chart without a separate Helm release.
+
+## Writing Tests
+
+Tests use [helm-unittest](https://github.com/helm-unittest/helm-unittest). Each file targets one or more templates and uses `set:` to override values inline:
+
+```yaml
+suite: my tests
+templates:
+  - templates/deployment.yaml
+
+tests:
+  - it: should do X when Y is set
+    set:
+      bbdd.enabled: true
+      bbdd.serviceType: LoadBalancer
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+```
+
+- Use `templates:` at the test level to scope assertions to a specific template when the suite covers multiple.
+- Use `hasDocuments: count: 0` to assert a template renders nothing (e.g., Service when `bbdd.enabled: false`).
+- After changing templates, run `helm unittest --update-snapshot charts/steampipe/` and commit the updated snapshots in `tests/__snapshot__/`.
 

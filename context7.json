@@ -1,5 +1,7 @@
 {
   "$schema": "https://context7.com/schema/context7.json",
+  "url": "https://context7.com/devops-ia/steampipe",
+  "public_key": "pk_poNqP0E20Jn62M589pdY6",
   "projectTitle": "Steampipe Helm Chart",
   "description": "Helm chart for deploying Steampipe as a persistent PostgreSQL-compatible service (port 9193) on Kubernetes. Supports 140+ cloud provider plugins (AWS, GCP, Azure, Kubernetes, GitHub, etc.), automatic plugin installation via init containers, and workload identity integration for credential-free authentication.",
   "folders": ["charts/steampipe", "docs"],
