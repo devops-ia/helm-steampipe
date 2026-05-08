@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   pull_request:
 
+permissions: {}
+
 jobs:
   lint-test:
     permissions:
