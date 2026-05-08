@@ -28,45 +28,34 @@
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Kubernetes Cluster                                          │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  Steampipe Pod                                        │   │
-│  │                                                       │   │
-│  │  ┌─────────────┐   ┌──────────────────────────────┐  │   │
-│  │  │ initContainer│   │  steampipe container         │  │   │
-│  │  │              │   │                              │  │   │
-│  │  │ plugin install│  │  :9193 PostgreSQL endpoint   │  │   │
-│  │  └──────────────┘   └──────────────────────────────┘  │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                              │                               │
-│  ┌───────────┐               │ postgres://                   │
-│  │  Service  │               │                               │
-│  │ ClusterIP │◀──────────────┘                               │
-│  │  :9193    │                                               │
-│  └─────┬─────┘                                               │
-│        │                                                     │
-│        ├──────────────▶  Grafana / psql / BI tools           │
-│        │                                                     │
-│  ┌─────▼──────────────────────────────────────────────┐     │
-│  │  Powerpipe Pod (optional)                           │     │
-│  │                                                     │     │
-│  │  ┌──────────────┐   ┌───────────────────────────┐  │     │
-│  │  │ initContainer │   │  powerpipe container      │  │     │
-│  │  │               │   │                           │  │     │
-│  │  │ mod install   │   │  :9033 HTTP dashboard     │  │     │
-│  │  └───────────────┘   └───────────────────────────┘  │     │
-│  └─────────────────────────────────────────────────────┘     │
-│                              │                               │
-│  ┌───────────┐   ┌──────────▼───┐   ┌───────────────────┐   │
-│  │  Service  │   │   Ingress    │   │  oauth2-proxy     │   │
-│  │ ClusterIP │   │  (HTTP ✅)   │   │  (optional)       │   │
-│  │  :9033    │   │              │   │  OIDC / Google /  │   │
-│  └───────────┘   └──────────────┘   │  GitHub / Keycloak│   │
-│                                     └───────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph k8s["☸ Kubernetes Cluster"]
+        subgraph sp_pod["Steampipe Pod"]
+            sp_init["initContainer\nplugin install"]
+            sp_ct["steampipe container\n:9193 PostgreSQL"]
+        end
+
+        sp_svc["Service ClusterIP :9193"]
+
+        subgraph pp_pod["Powerpipe Pod (optional)"]
+            pp_init["initContainer\nmod install"]
+            pp_ct["powerpipe container\n:9033 HTTP dashboard"]
+        end
+
+        pp_svc["Service ClusterIP :9033"]
+        ingress["Ingress (HTTP ✅)"]
+        oauth["oauth2-proxy (optional)\nOIDC / Google / GitHub / Keycloak"]
+    end
+
+    ext["🔌 Grafana / psql / BI tools"]
+
+    sp_ct -->|postgres://| sp_svc
+    sp_svc --> ext
+    sp_svc -->|postgres://| pp_pod
+    pp_ct --> pp_svc
+    pp_svc --> ingress
+    ingress -.- oauth
 ```
 
 ## Quick Start
