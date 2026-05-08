@@ -8,6 +8,10 @@ on:
     paths:
       - "charts/steampipe/**"
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   get-version:
     runs-on: ubuntu-latest
