@@ -9,7 +9,8 @@ updates:
       - enhancement
       - dependency-management
     assignees:
-      - devops-ia/devops-ia
+      - ialejandro
+      - amartingarcia
     groups:
       github-actions:
         patterns:
@@ -21,19 +22,55 @@ updates:
     pull-request-branch-name:
       separator: "-"
 
-  - package-ecosystem: npm
-    directory: "/"
+  - package-ecosystem: helm
+    directory: "/charts"
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     labels:
       - enhancement
       - dependency-management
     assignees:
-      - devops-ia/devops-ia
+      - ialejandro
+      - amartingarcia
+    groups:
+      helm:
+        patterns:
+          - "*"
     commit-message:
-      prefix: chore
+      prefix: fix
       include: scope
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
+    rebase-strategy: auto
+    pull-request-branch-name:
+      separator: "-"
+
+  - package-ecosystem: helm
+    directory: "/charts"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 10
+    labels:
+      - enhancement
+      - dependency-management
+    assignees:
+      - ialejandro
+      - amartingarcia
+    groups:
+      helm:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: feat
+      include: scope
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-patch
     rebase-strategy: auto
     pull-request-branch-name:
       separator: "-"
